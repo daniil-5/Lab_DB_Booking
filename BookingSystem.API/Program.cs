@@ -47,8 +47,11 @@ builder.Services.AddScoped<IHotelPhotoService, HotelPhotoService>();
 builder.Services.AddScoped<IHotelRepository, HotelRepository>();
 builder.Services.AddScoped<IHotelService, HotelService>();
 
+builder.Services.AddScoped<DatabaseSeeder>(); // Add seeder service
+
 builder.Services.AddSingleton<ITestOutputHelper, TestOutputHelper>();
 builder.Services.AddScoped<TestRunner>();
+
 
 builder.Services.AddCors(options =>
 {
@@ -115,20 +118,37 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
     
-    _ = Task.Run(async () =>
+    using (var scope = app.Services.CreateScope())
     {
+        var services = scope.ServiceProvider;
         try
         {
-            var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
-            using var scope = scopeFactory.CreateScope();
-            var testRunner = scope.ServiceProvider.GetRequiredService<TestRunner>();
-            await testRunner.RunAllTests();
+            var seeder = services.GetRequiredService<DatabaseSeeder>();
+            await seeder.SeedAsync();
+            Console.WriteLine("Database seeded successfully.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️ Test Runner Error: {ex.Message}");
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "An error occurred while seeding the database.");
+            Console.WriteLine($"Database seeding error: {ex.Message}");
         }
-    });
+    }
+    
+    // _ = Task.Run(async () =>
+    // {
+    //     try
+    //     {
+    //         var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
+    //         using var scope = scopeFactory.CreateScope();
+    //         var testRunner = scope.ServiceProvider.GetRequiredService<TestRunner>();
+    //         await testRunner.RunAllTests();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"⚠️ Test Runner Error: {ex.Message}");
+    //     }
+    // });
 }
 app.UseHttpsRedirection();
 app.UseCors("AllowSpecificOrigin");
