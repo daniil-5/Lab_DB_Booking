@@ -49,6 +49,8 @@ builder.Services.AddScoped<IHotelService, HotelService>();
 
 builder.Services.AddScoped<DatabaseSeeder>(); // Add seeder service
 
+builder.Services.AddScoped<ISerializationService, SerializationService>(); // Serializer service
+
 builder.Services.AddSingleton<ITestOutputHelper, TestOutputHelper>();
 builder.Services.AddScoped<TestRunner>();
 
@@ -60,8 +62,7 @@ builder.Services.AddCors(options =>
             .WithOrigins(
                 "http://localhost:5044",
                 "https://localhost:7050",
-                "http://localhost:5173",
-                "https://localhost:5173"
+                "http://localhost:5173"
             )
             .AllowAnyMethod()
             .AllowAnyHeader()
