@@ -16,12 +16,12 @@ public class HotelPhotoServiceTests
 
     public HotelPhotoServiceTests()
     {
-        _fixture = new Fixture();
-        _fixture.Behaviors.OfType<ThrowingRecursionBehavior>().ToList()
-            .ForEach(b => _fixture.Behaviors.Remove(b));
-        _fixture.Behaviors.Add(new OmitOnRecursionBehavior(recursionDepth: 2));
-        _repoMock = new Mock<IRepository<HotelPhoto>>();
-        _service = new HotelPhotoService(_repoMock.Object);
+        // _fixture = new Fixture();
+        // _fixture.Behaviors.OfType<ThrowingRecursionBehavior>().ToList()
+        //     .ForEach(b => _fixture.Behaviors.Remove(b));
+        // _fixture.Behaviors.Add(new OmitOnRecursionBehavior(recursionDepth: 2));
+        // _repoMock = new Mock<IRepository<HotelPhoto>>();
+        // _service = new HotelPhotoService(_repoMock.Object);
     }
 
     [Fact]

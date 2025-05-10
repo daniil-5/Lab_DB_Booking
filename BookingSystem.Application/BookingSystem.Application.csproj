@@ -11,13 +11,15 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Content Include="..\..\..\..\SerializatorClean\Serializator\bin\Release\net8.0\Serializator.dll">
+        <Link>Serializator.dll</Link>
+      </Content>
       <Content Include="DTOs\.DS_Store" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="AutoFixture" Version="4.18.1" />
       <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-      <PackageReference Include="CloudinaryDotNet" Version="1.27.5" />
       <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
       <PackageReference Include="Moq" Version="4.20.72" />
       <PackageReference Include="xunit" Version="2.9.3" />

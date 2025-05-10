@@ -7,8 +7,10 @@ using BookingSystem.Application.Services;
 using BookingSystem.Application.Tests;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Interfaces;
+using BookingSystem.Domain.Other;
 using Microsoft.EntityFrameworkCore;
 using BookingSystem.Infrastructure.Repositories;
+using Microsoft.Extensions.Options;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
@@ -41,8 +43,9 @@ builder.Services.AddScoped<IRepository<RoomType>, BaseRepository<RoomType>>();
 builder.Services.AddScoped<IRepository<RoomPricing>, BaseRepository<RoomPricing>>();
 builder.Services.AddScoped<IRoomPricingService, RoomPricingService>();
 
-builder.Services.AddScoped<IRepository<HotelPhoto>, BaseRepository<HotelPhoto>>();
-builder.Services.AddScoped<IHotelPhotoService, HotelPhotoService>();
+// builder.Services.AddScoped<IRepository<HotelPhoto>, BaseRepository<HotelPhoto>>();
+// builder.Services.AddScoped<IHotelPhotoService, HotelPhotoService>();
+
 
 builder.Services.AddScoped<IHotelRepository, HotelRepository>();
 builder.Services.AddScoped<IHotelService, HotelService>();
@@ -53,6 +56,14 @@ builder.Services.AddScoped<ISerializationService, SerializationService>(); // Se
 
 builder.Services.AddSingleton<ITestOutputHelper, TestOutputHelper>();
 builder.Services.AddScoped<TestRunner>();
+
+builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
+builder.Services.AddScoped<IPhotoRepository>(provider => {
+    var settings = provider.GetRequiredService<IOptions<CloudinarySettings>>().Value;
+    return new CloudinaryPhotoRepository(settings);
+});
+builder.Services.AddScoped<IHotelPhotoService, HotelPhotoService>();
+builder.Services.AddScoped<IRepository<HotelPhoto>, BaseRepository<HotelPhoto>>();
 
 
 builder.Services.AddCors(options =>
