@@ -2,6 +2,7 @@ using BookingSystem.Application.DTOs;
 using BookingSystem.Application.DTOs.User;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Entities;
+using BookingSystem.Domain.Enums;
 using BookingSystem.Domain.Interfaces;
 
 namespace BookingSystem.Application.Services;
@@ -55,6 +56,22 @@ public class AuthService : IAuthService
             Email = user.Email,
             Username = user.Username,
             Token = _jwtService.GenerateToken(user)
+        };
+    }
+    public async Task<UserDto> GetUserById(int userId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null) return null;
+
+        return new UserDto
+        {
+            Id = user.Id,
+            Email = user.Email,
+            FirstName = user.FirstName,
+            PhoneNumber = user.PhoneNumber,
+            Username = user.Username,
+            LastName = user.LastName,
+            Role = ((UserRole)user.Role).ToString()
         };
     }
 }

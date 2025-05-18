@@ -24,9 +24,7 @@ public class AuthController : ControllerBase
         {
             var response = await _authService.Register(registerDto);
             
-            // Store JWT token in HTTP-only cookie
-            SetTokenCookie(response.Token);
-            
+            // SetTokenCookie(response.Token);
             // response.Token = null;
             
             return Ok(response);
@@ -44,9 +42,7 @@ public class AuthController : ControllerBase
         {
             var response = await _authService.Login(loginDto);
             
-            // Store JWT token in HTTP-only cookie
-            SetTokenCookie(response.Token);
-            
+            // SetTokenCookie(response.Token);
             // response.Token = null;
             
             return Ok(response);
@@ -60,7 +56,6 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     public IActionResult Logout()
     {
-        // Clear the authentication cookie
         Response.Cookies.Delete("X-Access-Token", new CookieOptions
         {
             HttpOnly = true,
@@ -79,7 +74,7 @@ public class AuthController : ControllerBase
         
         var cookieOptions = new CookieOptions
         {
-            HttpOnly = true, // Prevents client-side JS from reading the cookie
+            HttpOnly = true, // Prevents client-side JS from reading the cookie 
             Expires = DateTime.UtcNow.AddDays(expirationDays),
             Secure = true, // Requires HTTPS
             SameSite = SameSiteMode.Strict, // Prevents CSRF

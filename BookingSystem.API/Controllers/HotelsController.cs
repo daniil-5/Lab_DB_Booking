@@ -45,6 +45,7 @@ namespace BookingSystem.API.Controllers
         /// <param name="hotelDto"></param>
         /// <returns></returns>
         [HttpPost]
+        [Authorize(Roles = "Manager")]
         public async Task<ActionResult<HotelDto>> CreateHotel(CreateHotelDto hotelDto)
         {
             var createdHotel = await _hotelService.CreateHotelAsync(hotelDto);
@@ -52,6 +53,7 @@ namespace BookingSystem.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> UpdateHotel(int id, UpdateHotelDto hotelDto)
         {
             if (id != hotelDto.Id) return BadRequest("ID mismatch");
@@ -61,6 +63,7 @@ namespace BookingSystem.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> DeleteHotel(int id)
         {
             await _hotelService.DeleteHotelAsync(id);

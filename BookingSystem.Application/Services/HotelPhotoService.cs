@@ -268,6 +268,7 @@ public class HotelPhotoService : IHotelPhotoService
                         IsMain = false
                     };
                     
+                    
                     await _hotelPhotoRepository.AddAsync(newPhoto);
                 }
                 catch (Exception)

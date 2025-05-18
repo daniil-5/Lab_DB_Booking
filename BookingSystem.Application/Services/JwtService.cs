@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Entities;
+using BookingSystem.Domain.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -21,12 +22,12 @@ public class JwtService : IJwtService
     {
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:Secret"]));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
+        var userRoleName = ((UserRole)user.Role).ToString();
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role.ToString())
+            new Claim(ClaimTypes.Role, userRoleName)
         };
 
         var token = new JwtSecurityToken(
