@@ -57,6 +57,12 @@ namespace BookingSystem.Infrastructure.Data
                 .WithMany(r => r.Bookings)
                 .HasForeignKey(b => b.RoomId)
                 .OnDelete(DeleteBehavior.Restrict);
+            
+            modelBuilder.Entity<Booking>()
+                .HasOne(b => b.Hotel)
+                .WithMany(h => h.Bookings)
+                .HasForeignKey(b => b.HotelId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Configure snake_case naming convention for all entities
             foreach (var entity in modelBuilder.Model.GetEntityTypes())

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using BookingSystem.Application.DTOs;
 using BookingSystem.Application.DTOs.User;
 using BookingSystem.Application.Interfaces;
@@ -82,5 +83,30 @@ public class AuthController : ControllerBase
         };
         
         Response.Cookies.Append("X-Access-Token", token, cookieOptions);
+    }
+    [HttpGet("current")]
+    [Authorize]
+    public async Task<ActionResult<UserDto>> GetCurrentUser()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID not found in token");
+        }
+
+        try
+        {
+            var user = await _authService.GetUserById(int.Parse(userId));
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            return Ok(user);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 }

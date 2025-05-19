@@ -51,6 +51,7 @@ namespace BookingSystem.Application.Services
                 CheckInDate = bookingDto.CheckInDate,
                 CheckOutDate = bookingDto.CheckOutDate,
                 GuestCount = bookingDto.GuestCount,
+                HotelId = bookingDto.HotelId,
                 TotalPrice = await CalculateTotalPrice(bookingDto),
                 Status = (int)BookingStatus.Confirmed
             };
@@ -155,7 +156,7 @@ namespace BookingSystem.Application.Services
 
             return pricing.Sum(p => p.Price);
         }
-
+        
         private static BookingResponseDto MapToDto(Domain.Entities.Booking booking) => new()
         {
             Id = booking.Id,
@@ -163,6 +164,7 @@ namespace BookingSystem.Application.Services
             UserId = booking.UserId,
             CheckInDate = booking.CheckInDate,
             CheckOutDate = booking.CheckOutDate,
+            HotelId = booking.HotelId,
             GuestCount = booking.GuestCount,
             TotalPrice = booking.TotalPrice,
             Status = booking.Status

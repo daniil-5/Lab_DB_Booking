@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Interfaces;
 using BookingSystem.Infrastructure.Data;
@@ -12,5 +13,39 @@ public class UserRepository : BaseRepository<User>, IUserRepository
     public async Task<User> GetByEmailAsync(string email)
     {
         return await _context.Users.FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted);
+    }
+    public async Task<(IEnumerable<User> users, int totalCount)> SearchUsersAsync(
+        Expression<Func<User, bool>> filter,
+        Func<IQueryable<User>, IOrderedQueryable<User>> orderBy,
+        int pageNumber,
+        int pageSize)
+    {
+        var query = _context.Users.AsQueryable();
+        
+        // Apply the filter (if any)
+        if (filter != null)
+        {
+            query = query.Where(filter);
+        }
+        
+        // Always exclude deleted users
+        query = query.Where(u => !u.IsDeleted);
+        
+        // Get the total count for pagination metadata
+        var totalCount = await query.CountAsync();
+        
+        // Apply ordering if specified, otherwise order by created date descending
+        var orderedQuery = orderBy != null
+            ? orderBy(query)
+            : query.OrderByDescending(u => u.CreatedAt);
+        
+        // Apply pagination
+        var users = await orderedQuery
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+        
+        // Return both the users and the total count
+        return (users, totalCount);
     }
 }

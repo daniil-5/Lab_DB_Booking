@@ -47,6 +47,10 @@ namespace BookingSystem.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("guest_count");
 
+                    b.Property<int>("HotelId")
+                        .HasColumnType("integer")
+                        .HasColumnName("hotel_id");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
@@ -73,6 +77,8 @@ namespace BookingSystem.Migrations
 
                     b.HasKey("Id")
                         .HasName("p_k_bookings");
+
+                    b.HasIndex("HotelId");
 
                     b.HasIndex("RoomId");
 
@@ -380,6 +386,13 @@ namespace BookingSystem.Migrations
 
             modelBuilder.Entity("BookingSystem.Domain.Entities.Booking", b =>
                 {
+                    b.HasOne("BookingSystem.Domain.Entities.Hotel", "Hotel")
+                        .WithMany("Bookings")
+                        .HasForeignKey("HotelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("f_k_bookings_hotels_hotel_id");
+
                     b.HasOne("BookingSystem.Domain.Entities.Room", "Room")
                         .WithMany("Bookings")
                         .HasForeignKey("RoomId")
@@ -393,6 +406,8 @@ namespace BookingSystem.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("f_k_bookings_users_user_id");
+
+                    b.Navigation("Hotel");
 
                     b.Navigation("Room");
 
@@ -449,6 +464,8 @@ namespace BookingSystem.Migrations
 
             modelBuilder.Entity("BookingSystem.Domain.Entities.Hotel", b =>
                 {
+                    b.Navigation("Bookings");
+
                     b.Navigation("Photos");
 
                     b.Navigation("RoomTypes");
