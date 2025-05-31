@@ -141,7 +141,7 @@ public class HotelPhotoService : IHotelPhotoService
     public async Task<IEnumerable<HotelPhotoDto>> GetPhotosByHotelIdAsync(int hotelId)
     {
         var photos = await _hotelPhotoRepository.GetAllAsync();
-        return photos.Where(p => p.HotelId == hotelId).Select(MapToDto).ToList();
+        return photos.Where(p => p.HotelId == hotelId && p.IsDeleted == false).Select(MapToDto).ToList();
     }
 
     public async Task<HotelPhotoDto> SetMainPhotoAsync(int photoId, int hotelId)

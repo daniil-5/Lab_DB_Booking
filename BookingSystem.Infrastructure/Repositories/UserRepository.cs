@@ -1,51 +1,126 @@
+// using System.Linq.Expressions;
+// using BookingSystem.Domain.Entities;
+// using BookingSystem.Domain.Interfaces;
+// using BookingSystem.Infrastructure.Data;
+// using Microsoft.EntityFrameworkCore;
+//
+// namespace BookingSystem.Infrastructure.Repositories;
+//
+// public class UserRepository : BaseRepository<User>, IUserRepository
+// {
+//     public UserRepository(AppDbContext context) : base(context) { }
+//
+//     public async Task<User> GetByEmailAsync(string email)
+//     {
+//         return await _context.Users.FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted);
+//     }
+//     public async Task<(IEnumerable<User> users, int totalCount)> SearchUsersAsync(
+//         Expression<Func<User, bool>> filter,
+//         Func<IQueryable<User>, IOrderedQueryable<User>> orderBy,
+//         int pageNumber,
+//         int pageSize)
+//     {
+//         var query = _context.Users.AsQueryable();
+//         
+//         // Apply the filter (if any)
+//         if (filter != null)
+//         {
+//             query = query.Where(filter);
+//         }
+//         
+//         // Always exclude deleted users
+//         query = query.Where(u => !u.IsDeleted);
+//         
+//         // Get the total count for pagination metadata
+//         var totalCount = await query.CountAsync();
+//         
+//         // Apply ordering if specified, otherwise order by created date descending
+//         var orderedQuery = orderBy != null
+//             ? orderBy(query)
+//             : query.OrderByDescending(u => u.CreatedAt);
+//         
+//         // Apply pagination
+//         var users = await orderedQuery
+//             .Skip((pageNumber - 1) * pageSize)
+//             .Take(pageSize)
+//             .ToListAsync();
+//         
+//         // Return both the users and the total count
+//         return (users, totalCount);
+//     }
+// }
+
+
 using System.Linq.Expressions;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Interfaces;
 using BookingSystem.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace BookingSystem.Infrastructure.Repositories;
-
-public class UserRepository : BaseRepository<User>, IUserRepository
+namespace BookingSystem.Infrastructure.Repositories
 {
-    public UserRepository(AppDbContext context) : base(context) { }
-
-    public async Task<User> GetByEmailAsync(string email)
+    public class UserRepository : BaseRepository<User>, IUserRepository
     {
-        return await _context.Users.FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted);
-    }
-    public async Task<(IEnumerable<User> users, int totalCount)> SearchUsersAsync(
-        Expression<Func<User, bool>> filter,
-        Func<IQueryable<User>, IOrderedQueryable<User>> orderBy,
-        int pageNumber,
-        int pageSize)
-    {
-        var query = _context.Users.AsQueryable();
+        private readonly AppDbContext _dbContext;
         
-        // Apply the filter (if any)
-        if (filter != null)
+        public UserRepository(AppDbContext context) : base(context) 
         {
-            query = query.Where(filter);
+            _dbContext = context;
+        }
+
+        public async Task<User> GetByEmailAsync(string email)
+        {
+            return await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted);
         }
         
-        // Always exclude deleted users
-        query = query.Where(u => !u.IsDeleted);
+        public async Task<(IEnumerable<User> users, int totalCount)> SearchUsersAsync(
+            Expression<Func<User, bool>> filter = null,
+            Func<IQueryable<User>, IOrderedQueryable<User>> orderBy = null,
+            int pageNumber = 1,
+            int pageSize = 10)
+        {
+            var query = _dbContext.Users.AsQueryable();
+            
+            // Apply the filter (if any)
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+            
+            // Always exclude deleted users
+            query = query.Where(u => !u.IsDeleted);
+            
+            // Get the total count for pagination metadata
+            var totalCount = await query.CountAsync();
+            
+            // Apply ordering if specified, otherwise order by created date descending
+            var orderedQuery = orderBy != null
+                ? orderBy(query)
+                : query.OrderByDescending(u => u.CreatedAt);
+            
+            // Apply pagination
+            var users = await orderedQuery
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+            
+            // Return both the users and the total count
+            return (users, totalCount);
+        }
         
-        // Get the total count for pagination metadata
-        var totalCount = await query.CountAsync();
+        public async Task<User> GetUserWithDetailsAsync(int userId)
+        {
+            return await _dbContext.Users
+                .Include(u => u.Bookings.Where(b => !b.IsDeleted))
+                    .ThenInclude(b => b.Hotel)
+                .Include(u => u.Bookings.Where(b => !b.IsDeleted))
+                    .ThenInclude(b => b.RoomType)
+                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
+        }
         
-        // Apply ordering if specified, otherwise order by created date descending
-        var orderedQuery = orderBy != null
-            ? orderBy(query)
-            : query.OrderByDescending(u => u.CreatedAt);
-        
-        // Apply pagination
-        var users = await orderedQuery
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-        
-        // Return both the users and the total count
-        return (users, totalCount);
+        public async Task<bool> EmailExistsAsync(string email)
+        {
+            return await _dbContext.Users.AnyAsync(u => u.Email == email && !u.IsDeleted);
+        }
     }
 }

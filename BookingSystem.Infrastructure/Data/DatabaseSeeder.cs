@@ -304,7 +304,7 @@ namespace BookingSystem.Infrastructure.Data
                     {
                         Name = typeName,
                         Description = $"{typeName} room with {bedCount} bed(s) and {area}m² area",
-                        BedCount = bedCount,
+                        Capacity = bedCount,
                         Area = area,
                         Floor = _random.Next(1, 10),
                         HotelId = hotel.Id,
@@ -353,132 +353,137 @@ namespace BookingSystem.Infrastructure.Data
             await _context.SaveChangesAsync();
             _logger.LogInformation("Seeded {count} rooms", rooms.Count);
         }
-
         private async Task SeedRoomPricingsAsync()
+{
+    if (await _context.RoomPricings.AnyAsync())
+    {
+        _logger.LogInformation("Room pricings table already has data - skipping seeding");
+        return;
+    }
+
+    var roomTypes = await _context.RoomTypes.ToListAsync();
+    var pricings = new List<RoomPricing>();
+    
+    foreach (var roomType in roomTypes)
+    {
+        // Use the BasePrice property from RoomType
+        var basePrice = roomType.BasePrice;
+        if (basePrice <= 0)
         {
-            if (await _context.RoomPricings.AnyAsync())
+            // Fallback if BasePrice is not set
+            basePrice = roomType.Name switch
             {
-                _logger.LogInformation("Room pricings table already has data - skipping seeding");
-                return;
-            }
-
-            var rooms = await _context.Rooms.Include(r => r.RoomType).ToListAsync();
-            var pricings = new List<RoomPricing>();
-            
-            foreach (var room in rooms)
-            {
-                // Create pricing for next 30 days
-                var basePrice = room.RoomType.Name switch
-                {
-                    "Standard" => 100m,
-                    "Deluxe" => 150m,
-                    "Suite" => 200m,
-                    "Family Room" => 250m,
-                    "Penthouse" => 400m,
-                    _ => 120m
-                };
-                
-                // Add slight variation to price
-                basePrice += _random.Next(-20, 21);
-                
-                for (int i = 0; i < 30; i++)
-                {
-                    var date = _currentDate.Date.AddDays(i);
-                    var isWeekend = date.DayOfWeek == DayOfWeek.Friday || date.DayOfWeek == DayOfWeek.Saturday;
-                    var price = basePrice;
-                    
-                    // Increase price on weekends
-                    if (isWeekend)
-                    {
-                        price += basePrice * 0.2m;
-                    }
-                    
-                    pricings.Add(new RoomPricing
-                    {
-                        RoomId = room.Id,
-                        Date = date,
-                        Price = Math.Round(price, 2),
-                        CreatedAt = _currentDate,
-                        IsDeleted = false
-                    });
-                }
-            }
-            
-            await _context.RoomPricings.AddRangeAsync(pricings);
-            await _context.SaveChangesAsync();
-            _logger.LogInformation("Seeded {count} room pricings", pricings.Count);
+                "Standard" => 100m,
+                "Deluxe" => 150m,
+                "Suite" => 200m,
+                "Family Room" => 250m,
+                "Penthouse" => 400m,
+                _ => 120m
+            };
         }
-
-        private async Task SeedBookingsAsync()
+        
+        // Add slight variation to price
+        basePrice += _random.Next(-20, 21);
+        
+        for (int i = 0; i < 30; i++)
         {
-            bool isExisting = await _context.Bookings.AnyAsync();
-            if (isExisting)
-            {
-                _logger.LogInformation("Bookings table already has data - skipping seeding");
-                return;
-            }
-
-            var users = await _context.Users.Where(u => u.Role == (int)UserRole.Guest).ToListAsync();
-            var rooms = await _context.Rooms.Include(r => r.RoomType).ToListAsync();
-            var bookings = new List<Booking>();
+            var date = _currentDate.Date.AddDays(i);
+            var isWeekend = date.DayOfWeek == DayOfWeek.Friday || date.DayOfWeek == DayOfWeek.Saturday;
+            var price = basePrice;
             
-            // Create 20 bookings
-            for (int i = 0; i < 20; i++)
+            // Increase price on weekends
+            if (isWeekend)
             {
-                var user = users[_random.Next(users.Count)];
-                var room = rooms[_random.Next(rooms.Count)];
-                
-                // Random duration between 1 and 7 days
-                var duration = _random.Next(1, 8);
-                
-                // Random check-in date between -15 days and +30 days from current date
-                var daysOffset = _random.Next(-15, 31);
-                var checkInDate = _currentDate.Date.AddDays(daysOffset);
-                var checkOutDate = checkInDate.AddDays(duration);
-                
-                // Determine booking status based on dates
-                BookingStatus status;
-                if (checkOutDate < _currentDate)
-                {
-                    status = BookingStatus.Completed;
-                }
-                else if (checkInDate <= _currentDate && checkOutDate >= _currentDate)
-                {
-                    status = BookingStatus.Pending;
-                }
-                else if (checkInDate > _currentDate)
-                {
-                    status = BookingStatus.Confirmed;
-                }
-                else
-                {
-                    status = BookingStatus.Cancelled;
-                }
-                
-                // Calculate price based on room's daily price and duration
-                var totalPrice = duration * 100m; // Simplified calculation
-                
-                // Add random guests (1 to max room capacity)
-                var maxGuests = room.RoomType.BedCount * 2;
-                var guestCount = _random.Next(1, maxGuests + 1);
-                
-                bookings.Add(new Booking
-                {
-                    UserId = user.Id,
-                    RoomId = room.Id,
-                    CheckInDate = checkInDate,
-                    CheckOutDate = checkOutDate,
-                    GuestCount = guestCount,
-                    TotalPrice = totalPrice,
-                    Status = (int)status,
-                    CreatedAt = _currentDate.AddDays(-(_random.Next(1, 30))), // Created 1-30 days ago
-                    IsDeleted = false
-                });
+                price += basePrice * 0.2m;
             }
             
-            await _context.Bookings.AddRangeAsync(bookings);
-            await _context.SaveChangesAsync();
-            _logger.LogInformation("Seeded {count} bookings", bookings.Count);
+            pricings.Add(new RoomPricing
+            {
+                RoomTypeId = roomType.Id, // Changed from RoomId to RoomTypeId
+                Date = date,
+                Price = Math.Round(price, 2),
+                CreatedAt = _currentDate,
+                IsDeleted = false
+            });
         }
+    }
+    
+    await _context.RoomPricings.AddRangeAsync(pricings);
+    await _context.SaveChangesAsync();
+    _logger.LogInformation("Seeded {count} room pricings", pricings.Count);
+}
+
+    private async Task SeedBookingsAsync()
+{
+    bool isExisting = await _context.Bookings.AnyAsync();
+    if (isExisting)
+    {
+        _logger.LogInformation("Bookings table already has data - skipping seeding");
+        return;
+    }
+
+    var users = await _context.Users.Where(u => u.Role == (int)UserRole.Guest).ToListAsync();
+    var roomTypes = await _context.RoomTypes.Include(rt => rt.Hotel).ToListAsync();
+    var bookings = new List<Booking>();
+    
+    // Create 20 bookings
+    for (int i = 0; i < 20; i++)
+    {
+        var user = users[_random.Next(users.Count)];
+        var roomType = roomTypes[_random.Next(roomTypes.Count)];
+        
+        // Random duration between 1 and 7 days
+        var duration = _random.Next(1, 8);
+        
+        // Random check-in date between -15 days and +30 days from current date
+        var daysOffset = _random.Next(-15, 31);
+        var checkInDate = _currentDate.Date.AddDays(daysOffset);
+        var checkOutDate = checkInDate.AddDays(duration);
+        
+        // Determine booking status based on dates
+        BookingStatus status;
+        if (checkOutDate < _currentDate)
+        {
+            status = BookingStatus.Completed;
+        }
+        else if (checkInDate <= _currentDate && checkOutDate >= _currentDate)
+        {
+            status = BookingStatus.Active;
+        }
+        else if (checkInDate > _currentDate)
+        {
+            status = BookingStatus.Confirmed;
+        }
+        else
+        {
+            status = BookingStatus.Cancelled;
+        }
+        
+        // Calculate price based on room type's base price and duration
+        var totalPrice = duration * (roomType.BasePrice > 0 ? roomType.BasePrice : 100m);
+        
+        // Add random guests (1 to max room capacity)
+        var maxGuests = roomType.Capacity > 0 ? roomType.Capacity : 2;
+        var guestCount = _random.Next(1, maxGuests + 1);
+        
+        bookings.Add(new Booking
+        {
+            UserId = user.Id,
+            RoomTypeId = roomType.Id, // Changed from RoomId to RoomTypeId
+            HotelId = roomType.HotelId, // Added HotelId from the room type's hotel
+            CheckInDate = checkInDate,
+            CheckOutDate = checkOutDate,
+            GuestCount = guestCount,
+            TotalPrice = totalPrice,
+            Status = (int)status,
+            CreatedAt = _currentDate.AddDays(-(_random.Next(1, 30))), // Created 1-30 days ago
+            IsDeleted = false
+        });
+    }
+    
+    await _context.Bookings.AddRangeAsync(bookings);
+    await _context.SaveChangesAsync();
+    _logger.LogInformation("Seeded {count} bookings", bookings.Count);
+}
     }
 }

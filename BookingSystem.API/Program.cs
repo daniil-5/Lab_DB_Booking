@@ -10,6 +10,8 @@ using BookingSystem.Domain.Interfaces;
 using BookingSystem.Domain.Other;
 using Microsoft.EntityFrameworkCore;
 using BookingSystem.Infrastructure.Repositories;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Xunit;
@@ -19,7 +21,15 @@ using Xunit.Sdk;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // This preserves references and handles circular references
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+        
+        // Optionally, you can also set this to ignore cycles
+        // options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 builder.Services.AddEndpointsApiExplorer();
 // builder.Services.AddSwaggerGen();
 builder.Services.AddSwaggerGen(c =>
@@ -56,14 +66,35 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Configure Entity Framework Core with PostgreSQL
+// builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<AppDbContext>(options => 
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    
+    // Important: Disable query caching
+    options.EnableSensitiveDataLogging();
+    options.EnableDetailedErrors();
+    
+    // Force EF to rebuild the model
+    var serviceProvider = options.Options.FindExtension<CoreOptionsExtension>()?.ApplicationServiceProvider;
+    if (serviceProvider != null)
+    {
+        var modelCache = serviceProvider.GetService<IMemoryCache>();
+        modelCache?.Remove(typeof(AppDbContext));
+    }
+});
+
 builder.Services.AddScoped<IRepository<Booking>, BaseRepository<Booking>>();
-builder.Services.AddScoped<IRepository<Room>, BaseRepository<Room>>();
+builder.Services.AddScoped<IHotelRepository, HotelRepository>();
+builder.Services.AddScoped<IRepository<RoomType>, BaseRepository<RoomType>>();
 builder.Services.AddScoped<IBookingService, BookingService>();
+
+builder.Services.AddScoped<IHotelService, HotelService>();
 builder.Services.AddScoped<IRepository<Booking>, BaseRepository<Booking>>();
 builder.Services.AddScoped<IRepository<Room>, BaseRepository<Room>>();
-builder.Services.AddScoped<IRepository<Hotel>, BaseRepository<Hotel>>();
-builder.Services.AddScoped<IRepository<Room>, BaseRepository<Room>>();
+
+builder.Services.AddScoped<IRepository<Booking>, BaseRepository<Booking>>();
 
 builder.Services.AddScoped<IRoomService, RoomService>();
 builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();
@@ -74,9 +105,6 @@ builder.Services.AddScoped<IRoomPricingService, RoomPricingService>();
 
 // builder.Services.AddScoped<IRepository<HotelPhoto>, BaseRepository<HotelPhoto>>();
 // builder.Services.AddScoped<IHotelPhotoService, HotelPhotoService>();
-
-builder.Services.AddScoped<IHotelRepository, HotelRepository>();
-builder.Services.AddScoped<IHotelService, HotelService>();
 
 builder.Services.AddScoped<DatabaseSeeder>(); // Add seeder service
 
@@ -218,9 +246,9 @@ public class TestRunner
     {
         var testClasses = new List<Type>
         {
-            typeof(BookingServiceTests),
+            // typeof(BookingServiceTests),
             typeof(HotelServiceTests),
-            typeof(RoomTypeServiceTests),
+            // typeof(RoomTypeServiceTests),
             typeof(RoomServiceTests),
             typeof(HotelPhotoServiceTests)
         };

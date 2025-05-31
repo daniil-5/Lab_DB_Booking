@@ -168,7 +168,7 @@ public class BookingsController : ControllerBase
         }
     }
     [HttpGet("all")]
-    [Authorize(Roles = "Manager,Admin")]
+    // [Authorize(Roles = "Manager,Admin")]
     public async Task<ActionResult<IEnumerable<BookingResponseDto>>> GetAllBookings()
     {
         var bookings = await _bookingService.GetAllBookingsAsync();

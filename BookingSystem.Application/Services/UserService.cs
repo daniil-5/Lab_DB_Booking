@@ -88,19 +88,19 @@ namespace BookingSystem.Application.Services
         public async Task<UserDto> GetUserByIdAsync(int id)
         {
             var user = await _userRepository.GetByIdAsync(id);
-            return user != null ? MapToDto(user) : null;
+            return MapToDto(user);
         }
 
         public async Task<UserDto> GetUserByEmailAsync(string email)
         {
             var user = await _userRepository.GetByEmailAsync(email);
-            return user != null ? MapToDto(user) : null;
+            return MapToDto(user);
         }
 
         public async Task<UserDto> GetUserByUsernameAsync(string username)
         {
             var user = await _userRepository.GetByEmailAsync(username);
-            return user != null ? MapToDto(user) : null;
+            return MapToDto(user);
         }
 
         public async Task<IEnumerable<UserDto>> GetAllUsersAsync()

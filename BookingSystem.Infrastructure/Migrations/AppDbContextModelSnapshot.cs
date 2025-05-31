@@ -55,16 +55,20 @@ namespace BookingSystem.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
 
-                    b.Property<int>("RoomId")
+                    b.Property<int?>("RoomId")
                         .HasColumnType("integer")
                         .HasColumnName("room_id");
+
+                    b.Property<int>("RoomTypeId")
+                        .HasColumnType("integer")
+                        .HasColumnName("room_type_id");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer")
                         .HasColumnName("status");
 
                     b.Property<decimal>("TotalPrice")
-                        .HasColumnType("numeric")
+                        .HasColumnType("decimal(18,2)")
                         .HasColumnName("total_price");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -80,7 +84,10 @@ namespace BookingSystem.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.HasIndex("RoomId");
+                    b.HasIndex("RoomId")
+                        .HasDatabaseName("ix_bookings_room_id");
+
+                    b.HasIndex("RoomTypeId");
 
                     b.HasIndex("UserId");
 
@@ -95,6 +102,15 @@ namespace BookingSystem.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Amenities")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("amenities");
+
+                    b.Property<decimal>("BasePrice")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("base_price");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -249,12 +265,16 @@ namespace BookingSystem.Migrations
                         .HasColumnName("is_deleted");
 
                     b.Property<decimal>("Price")
-                        .HasColumnType("numeric")
+                        .HasColumnType("decimal(18,2)")
                         .HasColumnName("price");
 
-                    b.Property<int>("RoomId")
+                    b.Property<int?>("RoomId")
                         .HasColumnType("integer")
                         .HasColumnName("room_id");
+
+                    b.Property<int>("RoomTypeId")
+                        .HasColumnType("integer")
+                        .HasColumnName("room_type_id");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -264,6 +284,8 @@ namespace BookingSystem.Migrations
                         .HasName("p_k_room_pricings");
 
                     b.HasIndex("RoomId");
+
+                    b.HasIndex("RoomTypeId");
 
                     b.ToTable("room_pricings", (string)null);
                 });
@@ -281,9 +303,13 @@ namespace BookingSystem.Migrations
                         .HasColumnType("numeric")
                         .HasColumnName("area");
 
-                    b.Property<int>("BedCount")
+                    b.Property<decimal>("BasePrice")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("base_price");
+
+                    b.Property<int>("Capacity")
                         .HasColumnType("integer")
-                        .HasColumnName("bed_count");
+                        .HasColumnName("capacity");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -393,12 +419,17 @@ namespace BookingSystem.Migrations
                         .IsRequired()
                         .HasConstraintName("f_k_bookings_hotels_hotel_id");
 
-                    b.HasOne("BookingSystem.Domain.Entities.Room", "Room")
+                    b.HasOne("BookingSystem.Domain.Entities.Room", null)
                         .WithMany("Bookings")
                         .HasForeignKey("RoomId")
+                        .HasConstraintName("f_k_bookings_rooms_room_id");
+
+                    b.HasOne("BookingSystem.Domain.Entities.RoomType", "RoomType")
+                        .WithMany("Bookings")
+                        .HasForeignKey("RoomTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("f_k_bookings_rooms_room_id");
+                        .HasConstraintName("f_k_bookings_room_types_room_type_id");
 
                     b.HasOne("BookingSystem.Domain.Entities.User", "User")
                         .WithMany("Bookings")
@@ -409,7 +440,7 @@ namespace BookingSystem.Migrations
 
                     b.Navigation("Hotel");
 
-                    b.Navigation("Room");
+                    b.Navigation("RoomType");
 
                     b.Navigation("User");
                 });
@@ -440,14 +471,19 @@ namespace BookingSystem.Migrations
 
             modelBuilder.Entity("BookingSystem.Domain.Entities.RoomPricing", b =>
                 {
-                    b.HasOne("BookingSystem.Domain.Entities.Room", "Room")
+                    b.HasOne("BookingSystem.Domain.Entities.Room", null)
                         .WithMany("Pricing")
                         .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
                         .HasConstraintName("f_k_room_pricings_rooms_room_id");
 
-                    b.Navigation("Room");
+                    b.HasOne("BookingSystem.Domain.Entities.RoomType", "RoomType")
+                        .WithMany("Pricing")
+                        .HasForeignKey("RoomTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_room_pricings_room_types_room_type_id");
+
+                    b.Navigation("RoomType");
                 });
 
             modelBuilder.Entity("BookingSystem.Domain.Entities.RoomType", b =>
@@ -480,6 +516,10 @@ namespace BookingSystem.Migrations
 
             modelBuilder.Entity("BookingSystem.Domain.Entities.RoomType", b =>
                 {
+                    b.Navigation("Bookings");
+
+                    b.Navigation("Pricing");
+
                     b.Navigation("Rooms");
                 });
 

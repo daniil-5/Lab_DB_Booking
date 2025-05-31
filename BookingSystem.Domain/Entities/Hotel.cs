@@ -6,6 +6,10 @@ public class Hotel : BaseEntity
     public string Description { get; set; }
     public string Location { get; set; }
     public decimal Rating { get; set; }
+    
+    public decimal BasePrice { get; set; }
+    
+    public IList<string> Amenities { get; set; } = new List<string>();
     public ICollection<RoomType> RoomTypes { get; set; } = new List<RoomType>();
     public ICollection<HotelPhoto> Photos { get; set; } = new List<HotelPhoto>();
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();

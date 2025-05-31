@@ -17,7 +17,7 @@ public class RoomPricingService : IRoomPricingService
     {
         var roomPricing = new RoomPricing
         {
-            RoomId = pricingDto.RoomId,
+            RoomTypeId = pricingDto.RoomTypeId,
             Date = pricingDto.Date,
             Price = pricingDto.Price
         };
@@ -30,7 +30,7 @@ public class RoomPricingService : IRoomPricingService
     {
         var existingPricing = await _roomPricingRepository.GetByIdAsync(pricingDto.Id);
 
-        existingPricing.RoomId = pricingDto.RoomId;
+        existingPricing.RoomTypeId = pricingDto.RoomTypeId;
         existingPricing.Date = pricingDto.Date;
         existingPricing.Price = pricingDto.Price;
 
@@ -60,7 +60,7 @@ public class RoomPricingService : IRoomPricingService
         return new RoomPricingDto
         {
             Id = pricing.Id,
-            RoomId = pricing.RoomId,
+            RoomTypeId = pricing.RoomTypeId,
             Date = pricing.Date,
             Price = pricing.Price,
             CreatedAt = pricing.CreatedAt,

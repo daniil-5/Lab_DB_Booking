@@ -2,7 +2,7 @@ namespace BookingSystem.Application.DTOs.RoomPricing;
 
 public class CreateRoomPricingDto
 {
-    public int RoomId { get; set; }
+    public int RoomTypeId { get; set; }
     public DateTime Date { get; set; }
     public decimal Price { get; set; }
 }

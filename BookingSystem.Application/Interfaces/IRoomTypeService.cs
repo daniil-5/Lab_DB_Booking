@@ -10,5 +10,6 @@ public interface IRoomTypeService
     Task DeleteRoomTypeAsync(int id);
     Task<RoomTypeDto> GetRoomTypeByIdAsync(int id);
     Task<IEnumerable<RoomTypeDto>> GetAllRoomTypesAsync();
+    Task<IEnumerable<RoomTypeDto>> GetRoomTypesByHotelIdAsync(int hotelId);
     
 }

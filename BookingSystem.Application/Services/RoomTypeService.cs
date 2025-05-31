@@ -1,17 +1,18 @@
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Application.RoomType;
 using BookingSystem.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace BookingSystem.Application.Services;
 
 public class RoomTypeService : IRoomTypeService
     {
         private readonly IRepository<Domain.Entities.RoomType> _roomTypeRepository;
-        private readonly IRepository<Domain.Entities.Hotel> _hotelRepository;
+        private readonly IHotelRepository _hotelRepository;
 
         public RoomTypeService(
             IRepository<Domain.Entities.RoomType> roomTypeRepository,
-            IRepository<Domain.Entities.Hotel> hotelRepository)
+            IHotelRepository hotelRepository)
         {
             _roomTypeRepository = roomTypeRepository;
             _hotelRepository = hotelRepository;
@@ -30,7 +31,7 @@ public class RoomTypeService : IRoomTypeService
             {
                 Name = roomTypeDto.Name,
                 Description = roomTypeDto.Description,
-                BedCount = roomTypeDto.BedCount,
+                Capacity = roomTypeDto.BedCount,
                 Area = roomTypeDto.Area,
                 Floor = roomTypeDto.Floor,
                 HotelId = roomTypeDto.HotelId
@@ -56,7 +57,7 @@ public class RoomTypeService : IRoomTypeService
             
             existingRoomType.Name = roomTypeDto.Name;
             existingRoomType.Description = roomTypeDto.Description;
-            existingRoomType.BedCount = roomTypeDto.BedCount;
+            existingRoomType.Capacity = roomTypeDto.BedCount;
             existingRoomType.Area = roomTypeDto.Area;
             existingRoomType.Floor = roomTypeDto.Floor;
             existingRoomType.HotelId = roomTypeDto.HotelId;
@@ -99,6 +100,22 @@ public class RoomTypeService : IRoomTypeService
             var roomTypes = await _roomTypeRepository.GetAllAsync();
             return roomTypes.Select(MapToDto).ToList();
         }
+        public async Task<IEnumerable<RoomTypeDto>> GetRoomTypesByHotelIdAsync(int hotelId)
+        {
+            // First check if the hotel exists
+            var hotel = await _hotelRepository.GetByIdAsync(hotelId);
+            if (hotel == null)
+            {
+                throw new KeyNotFoundException($"Hotel with ID {hotelId} not found.");
+            }
+        
+            // Get all room types for this hotel
+            var roomTypes = await _roomTypeRepository.GetAllAsync(
+                rt => rt.HotelId == hotelId && !rt.IsDeleted,
+                include: query => query.Include(rt => rt.Rooms.Where(r => !r.IsDeleted)));
+            
+            return roomTypes.Select(MapToDto).ToList();
+        }
 
         private static RoomTypeDto MapToDto(Domain.Entities.RoomType roomType)
         {
@@ -107,7 +124,7 @@ public class RoomTypeService : IRoomTypeService
                 Id = roomType.Id,
                 Name = roomType.Name,
                 Description = roomType.Description,
-                BedCount = roomType.BedCount,
+                Capacity = roomType.Capacity,
                 Area = roomType.Area,
                 Floor = roomType.Floor,
                 HotelId = roomType.HotelId
