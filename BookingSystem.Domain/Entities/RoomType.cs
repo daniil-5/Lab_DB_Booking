@@ -12,8 +12,6 @@ public class RoomType : BaseEntity
     public int? Floor { get; set; }
     public int HotelId { get; set; }
     public Hotel Hotel { get; set; }
-    
-    
     public ICollection<Room> Rooms { get; set; } = new List<Room>();
     public ICollection<RoomPricing> Pricing { get; set; } = new List<RoomPricing>();
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();

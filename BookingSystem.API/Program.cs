@@ -20,9 +20,7 @@ using Xunit.Sdk;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
+builder.Services.AddControllers().AddJsonOptions(options => {
         // This preserves references and handles circular references
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
@@ -99,18 +97,17 @@ builder.Services.AddScoped<IRepository<RoomType>, BaseRepository<RoomType>>();
 builder.Services.AddScoped<IRepository<RoomPricing>, BaseRepository<RoomPricing>>();
 builder.Services.AddScoped<IRoomPricingService, RoomPricingService>();
 
-// builder.Services.AddScoped<IRepository<HotelPhoto>, BaseRepository<HotelPhoto>>();
-// builder.Services.AddScoped<IHotelPhotoService, HotelPhotoService>();
-
 builder.Services.AddScoped<DatabaseSeeder>(); // Add seeder service
 
 builder.Services.AddScoped<ISerializationService, SerializationService>(); // Serializer service
 
+// Setup the Cloudinary
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 builder.Services.AddScoped<IPhotoRepository>(provider => {
     var settings = provider.GetRequiredService<IOptions<CloudinarySettings>>().Value;
     return new CloudinaryPhotoRepository(settings);
 });
+
 builder.Services.AddScoped<IHotelPhotoService, HotelPhotoService>();
 builder.Services.AddScoped<IRepository<HotelPhoto>, BaseRepository<HotelPhoto>>();
 

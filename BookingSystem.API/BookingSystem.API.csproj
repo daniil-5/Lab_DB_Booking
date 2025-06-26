@@ -22,4 +22,9 @@
       <ProjectReference Include="..\BookingSystem.Infrastructure\BookingSystem.Infrastructure.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Content Remove="appsettings.json" />
+      <Content Remove="appsettings.Development.json" />
+    </ItemGroup>
+
 </Project>
