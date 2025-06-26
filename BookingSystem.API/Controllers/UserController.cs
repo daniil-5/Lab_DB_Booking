@@ -1,3 +1,4 @@
+
 using BookingSystem.Application.DTOs.User;
 using BookingSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,7 @@ using BookingSystem.Domain.Enums;
 namespace BookingSystem.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/users")]
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -26,7 +27,7 @@ namespace BookingSystem.API.Controllers
             return Ok(users);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         [Authorize]
         public async Task<ActionResult<UserDto>> GetUser(int id)
         {
@@ -60,7 +61,7 @@ namespace BookingSystem.API.Controllers
             }
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("{id:int}")]
         [Authorize]
         public async Task<IActionResult> UpdateUser(int id, UpdateUserDto userDto)
         {
@@ -89,7 +90,7 @@ namespace BookingSystem.API.Controllers
             }
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUser(int id)
         {

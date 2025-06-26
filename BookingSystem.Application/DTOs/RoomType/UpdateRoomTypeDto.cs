@@ -15,7 +15,7 @@ public class UpdateRoomTypeDto
         
     [Required(ErrorMessage = "Bed count is required")]
     [Range(1, 10, ErrorMessage = "Bed count must be between 1 and 10")]
-    public int BedCount { get; set; }
+    public int Capacity { get; set; }
         
     [Required(ErrorMessage = "Area is required")]
     [Range(1, 1000, ErrorMessage = "Area must be between 1 and 1000 square meters")]
@@ -25,4 +25,8 @@ public class UpdateRoomTypeDto
         
     [Required(ErrorMessage = "Hotel ID is required")]
     public int HotelId { get; set; }
+    
+    [Required(ErrorMessage = "Base price is required")]
+    [Range(0, double.MaxValue, ErrorMessage = "Base price must be a positive value")]
+    public decimal BasePrice { get; set; }
 }
