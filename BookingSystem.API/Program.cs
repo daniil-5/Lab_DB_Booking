@@ -106,11 +106,13 @@ builder.Services.AddScoped<DatabaseSeeder>(); // Add seeder service
 
 builder.Services.AddScoped<ISerializationService, SerializationService>(); // Serializer service
 
+// Setup the Cloudinary
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 builder.Services.AddScoped<IPhotoRepository>(provider => {
     var settings = provider.GetRequiredService<IOptions<CloudinarySettings>>().Value;
     return new CloudinaryPhotoRepository(settings);
 });
+
 builder.Services.AddScoped<IHotelPhotoService, HotelPhotoService>();
 builder.Services.AddScoped<IRepository<HotelPhoto>, BaseRepository<HotelPhoto>>();
 
