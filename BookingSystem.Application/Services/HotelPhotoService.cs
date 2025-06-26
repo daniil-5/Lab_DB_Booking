@@ -51,7 +51,7 @@ public class HotelPhotoService : IHotelPhotoService
             HotelId = hotelId,
             Url = uploadResult.Url,
             PublicId = uploadResult.PublicId,
-            Description = description,
+            Description = description ?? "No description",
             IsMain = isMain
         };
 
@@ -79,7 +79,7 @@ public class HotelPhotoService : IHotelPhotoService
                 HotelId = hotelId,
                 Url = result.Url,
                 PublicId = result.PublicId,
-                Description = null,
+                Description = "No description",
                 IsMain = false
             };
 
@@ -333,7 +333,7 @@ public class HotelPhotoService : IHotelPhotoService
             HotelId = photo.HotelId,
             Url = photo.Url,
             PublicId = photo.PublicId,
-            Description = photo.Description,
+            Description = photo.Description ?? "No description",
             IsMain = photo.IsMain,
             CreatedAt = photo.CreatedAt
         };

@@ -31,7 +31,8 @@ public class RoomTypeService : IRoomTypeService
             {
                 Name = roomTypeDto.Name,
                 Description = roomTypeDto.Description,
-                Capacity = roomTypeDto.BedCount,
+                Capacity = roomTypeDto.Capacity,
+                BasePrice = roomTypeDto.BasePrice,
                 Area = roomTypeDto.Area,
                 Floor = roomTypeDto.Floor,
                 HotelId = roomTypeDto.HotelId
@@ -57,7 +58,8 @@ public class RoomTypeService : IRoomTypeService
             
             existingRoomType.Name = roomTypeDto.Name;
             existingRoomType.Description = roomTypeDto.Description;
-            existingRoomType.Capacity = roomTypeDto.BedCount;
+            existingRoomType.Capacity = roomTypeDto.Capacity;
+            existingRoomType.BasePrice = roomTypeDto.BasePrice;
             existingRoomType.Area = roomTypeDto.Area;
             existingRoomType.Floor = roomTypeDto.Floor;
             existingRoomType.HotelId = roomTypeDto.HotelId;
@@ -124,6 +126,7 @@ public class RoomTypeService : IRoomTypeService
                 Id = roomType.Id,
                 Name = roomType.Name,
                 Description = roomType.Description,
+                BasePrice = roomType.BasePrice,
                 Capacity = roomType.Capacity,
                 Area = roomType.Area,
                 Floor = roomType.Floor,

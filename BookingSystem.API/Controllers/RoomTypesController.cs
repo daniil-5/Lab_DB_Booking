@@ -2,13 +2,11 @@ using BookingSystem.Application.Interfaces;
 using BookingSystem.Application.RoomType;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace BookingSystem.API.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/room-types")]
 [ApiController]
-[Authorize]
 public class RoomTypesController : ControllerBase
 {
     private readonly IRoomTypeService _roomTypeService;
@@ -19,6 +17,7 @@ public class RoomTypesController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<RoomTypeDto>>> GetAllRoomTypes()
     {
         try
@@ -32,7 +31,8 @@ public class RoomTypesController : ControllerBase
         }
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<RoomTypeDto>> GetRoomType(int id)
     {
         try
@@ -46,8 +46,8 @@ public class RoomTypesController : ControllerBase
         }
     }
 
-    // Add endpoint to get room types by hotel ID
-    [HttpGet("hotel/{hotelId}")]
+    [HttpGet("by-hotel/{hotelId:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<RoomTypeDto>>> GetRoomTypesByHotelId(int hotelId)
     {
         try
@@ -66,6 +66,7 @@ public class RoomTypesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Manager,Admin")]
     public async Task<ActionResult<RoomTypeDto>> CreateRoomType(CreateRoomTypeDto roomTypeDto)
     {
         try
@@ -83,7 +84,8 @@ public class RoomTypesController : ControllerBase
         }
     }
 
-    [HttpPut("{id}")]
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Manager,Admin")]
     public async Task<IActionResult> UpdateRoomType(int id, UpdateRoomTypeDto roomTypeDto)
     {
         if (id != roomTypeDto.Id)
@@ -106,7 +108,8 @@ public class RoomTypesController : ControllerBase
         }
     }
 
-    [HttpDelete("{id}")]
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Manager,Admin")]
     public async Task<IActionResult> DeleteRoomType(int id)
     {
         try

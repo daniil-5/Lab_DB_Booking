@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Application.Services;
-using BookingSystem.Application.Tests;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Interfaces;
 using BookingSystem.Domain.Other;
@@ -25,10 +24,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         // This preserves references and handles circular references
-        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
-        
-        // Optionally, you can also set this to ignore cycles
-        // options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 builder.Services.AddEndpointsApiExplorer();
 // builder.Services.AddSwaggerGen();
@@ -109,9 +105,6 @@ builder.Services.AddScoped<IRoomPricingService, RoomPricingService>();
 builder.Services.AddScoped<DatabaseSeeder>(); // Add seeder service
 
 builder.Services.AddScoped<ISerializationService, SerializationService>(); // Serializer service
-
-builder.Services.AddSingleton<ITestOutputHelper, TestOutputHelper>();
-builder.Services.AddScoped<TestRunner>();
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 builder.Services.AddScoped<IPhotoRepository>(provider => {
@@ -208,21 +201,6 @@ if (app.Environment.IsDevelopment())
             Console.WriteLine($"Database seeding error: {ex.Message}");
         }
     }
-    
-    // _ = Task.Run(async () =>
-    // {
-    //     try
-    //     {
-    //         var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
-    //         using var scope = scopeFactory.CreateScope();
-    //         var testRunner = scope.ServiceProvider.GetRequiredService<TestRunner>();
-    //         await testRunner.RunAllTests();
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         Console.WriteLine($"⚠️ Test Runner Error: {ex.Message}");
-    //     }
-    // });
 }
 app.UseHttpsRedirection();
 app.UseCors("AllowSpecificOrigin");
@@ -232,55 +210,3 @@ app.MapControllers();
 
 app.Run();
 
-
-public class TestRunner
-{
-    private readonly IServiceProvider _serviceProvider;
-
-    public TestRunner(IServiceProvider serviceProvider)
-    {
-        _serviceProvider = serviceProvider;
-    }
-
-    public async Task RunAllTests()
-    {
-        var testClasses = new List<Type>
-        {
-            // typeof(BookingServiceTests),
-            typeof(HotelServiceTests),
-            // typeof(RoomTypeServiceTests),
-            typeof(RoomServiceTests),
-            typeof(HotelPhotoServiceTests)
-        };
-
-        foreach (var testClass in testClasses)
-        {
-            Console.WriteLine($"\n=== Running tests for {testClass.Name} ===");
-            var testInstance = ActivatorUtilities.CreateInstance(_serviceProvider, testClass);
-            await RunTestsForClass(testInstance, testClass);
-        }
-    }
-
-    private async Task RunTestsForClass(object testInstance, Type testClass)
-    {
-        foreach (var method in testClass.GetMethods()
-                     .Where(m => m.GetCustomAttributes(typeof(FactAttribute), false).Any()))
-        {
-            Console.WriteLine($"Running test: {method.Name}");
-            try
-            {
-                var result = method.Invoke(testInstance, null);
-                if (result is Task taskResult)
-                {
-                    await taskResult;
-                }
-
-                Console.WriteLine($"✅ {method.Name} passed");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ {method.Name} failed: {ex.InnerException?.Message ?? ex.Message}");
-            }
-        }
-    }
-}

@@ -6,4 +6,16 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\BookingSystem.API\BookingSystem.API.csproj" />
+      <ProjectReference Include="..\BookingSystem.Application\BookingSystem.Application.csproj" />
+      <ProjectReference Include="..\BookingSystem.Domain\BookingSystem.Domain.csproj" />
+      <ProjectReference Include="..\BookingSystem.Infrastructure\BookingSystem.Infrastructure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
+      <PackageReference Include="MockQueryable.Moq" Version="7.0.3" />
+    </ItemGroup>
+
 </Project>
