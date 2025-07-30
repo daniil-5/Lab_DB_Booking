@@ -1,4 +1,5 @@
 using System.Text;
+using BookingSystem.Application.Decorators;
 using BookingSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -9,70 +10,92 @@ using BookingSystem.Domain.Interfaces;
 using BookingSystem.Domain.Other;
 using Microsoft.EntityFrameworkCore;
 using BookingSystem.Infrastructure.Repositories;
+using BookingSystem.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
-using Xunit;
-using Xunit.Abstractions;
-using Xunit.Sdk;
+using Serilog;
+using Serilog.Events;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services
+#region Logging and Controllers
+
+// Configure Serilog for logging
+builder.Host.UseSerilog((context, configuration) =>
+{
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .WriteTo.Console(
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+        .WriteTo.File(
+            path: "Logs/app-.txt",
+            rollingInterval: RollingInterval.Day,
+            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+        .Enrich.FromLogContext()
+        .MinimumLevel.Information()
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning);
+});
+
+// Add controllers and configure serialization to handle object cycles
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // This preserves references and handles circular references
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
+
 builder.Services.AddEndpointsApiExplorer();
-// builder.Services.AddSwaggerGen();
+
+#endregion
+
+#region Swagger
+
+// Configure Swagger and support for JWT authentication
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Hotel Booking API", Version = "v1" });
-    
-    // Add JWT Authentication support to Swagger UI
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
+        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and your token.",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer"
     });
-
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
-            new string[] {}
+            Array.Empty<string>()
         }
     });
 });
+
+#endregion
+
+#region Authentication and Infrastructure
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 
+#endregion
+
+#region Database
+
 // Configure Entity Framework Core with PostgreSQL
-// builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddDbContext<AppDbContext>(options => 
+builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
-    
-    // Important: Disable query caching
-    options.EnableSensitiveDataLogging();
+    options.EnableSensitiveDataLogging(); // Only for debugging!
     options.EnableDetailedErrors();
-    
-    // Force EF to rebuild the model
+
+    // Reset EF Core model cache (usually not required)
     var serviceProvider = options.Options.FindExtension<CoreOptionsExtension>()?.ApplicationServiceProvider;
     if (serviceProvider != null)
     {
@@ -81,50 +104,106 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     }
 });
 
+#endregion
+
+#region Redis and Cache
+
+// Register Redis connection
+builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
+{
+    var configuration = provider.GetService<IConfiguration>();
+    var connectionString = configuration?.GetConnectionString("Redis");
+    return ConnectionMultiplexer.Connect(connectionString ?? throw new InvalidOperationException("Redis connection string not configured"));
+});
+
+// Register distributed cache using Redis
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+});
+
+// Register cache service abstraction
+builder.Services.AddScoped<ICacheService, RedisCacheService>();
+
+#endregion
+
+#region Repositories
+
 builder.Services.AddScoped<IRepository<Booking>, BaseRepository<Booking>>();
 builder.Services.AddScoped<IHotelRepository, HotelRepository>();
 builder.Services.AddScoped<IRepository<RoomType>, BaseRepository<RoomType>>();
-builder.Services.AddScoped<IBookingService, BookingService>();
-
-builder.Services.AddScoped<IHotelService, HotelService>();
-builder.Services.AddScoped<IRepository<Booking>, BaseRepository<Booking>>();
 builder.Services.AddScoped<IRepository<Room>, BaseRepository<Room>>();
-
-builder.Services.AddScoped<IRepository<Booking>, BaseRepository<Booking>>();
-
-builder.Services.AddScoped<IRoomService, RoomService>();
-builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();
-builder.Services.AddScoped<IRepository<RoomType>, BaseRepository<RoomType>>();
-
 builder.Services.AddScoped<IRepository<RoomPricing>, BaseRepository<RoomPricing>>();
+builder.Services.AddScoped<IRepository<HotelPhoto>, BaseRepository<HotelPhoto>>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+
+#endregion
+
+#region Services and Decorators
+
+// Register main services for use inside decorators
+builder.Services.AddScoped<BookingService>();
+builder.Services.AddScoped<HotelService>();
+builder.Services.AddScoped<RoomService>();
+builder.Services.AddScoped<UserService>();
+
+// Use cached decorator implementations instead of standard services
+builder.Services.AddScoped<IBookingService>(provider =>
+    new CachedBookingService(
+        provider.GetRequiredService<BookingService>(),
+        provider.GetRequiredService<ICacheService>(),
+        provider.GetRequiredService<ILogger<CachedBookingService>>())
+);
+
+builder.Services.AddScoped<IHotelService>(provider =>
+    new CachedHotelService(
+        provider.GetRequiredService<HotelService>(),
+        provider.GetRequiredService<ICacheService>(),
+        provider.GetRequiredService<ILogger<CachedHotelService>>())
+);
+
+builder.Services.AddScoped<IRoomService>(provider =>
+    new CachedRoomService(
+        provider.GetRequiredService<RoomService>(),
+        provider.GetRequiredService<ICacheService>(),
+        provider.GetRequiredService<ILogger<CachedRoomService>>())
+);
+
+builder.Services.AddScoped<IUserService>(provider =>
+    new CachedUserService(
+        provider.GetRequiredService<UserService>(),
+        provider.GetRequiredService<ICacheService>(),
+        provider.GetRequiredService<ILogger<CachedUserService>>())
+);
+
+builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();
 builder.Services.AddScoped<IRoomPricingService, RoomPricingService>();
+builder.Services.AddScoped<DatabaseSeeder>();
+builder.Services.AddScoped<ISerializationService, SerializationService>();
 
-// builder.Services.AddScoped<IRepository<HotelPhoto>, BaseRepository<HotelPhoto>>();
-// builder.Services.AddScoped<IHotelPhotoService, HotelPhotoService>();
+#endregion
 
-builder.Services.AddScoped<DatabaseSeeder>(); // Add seeder service
+#region Cloudinary
 
-builder.Services.AddScoped<ISerializationService, SerializationService>(); // Serializer service
-
-// Setup the Cloudinary
+// Cloudinary configuration and repository
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
-builder.Services.AddScoped<IPhotoRepository>(provider => {
+builder.Services.AddScoped<IPhotoRepository>(provider =>
+{
     var settings = provider.GetRequiredService<IOptions<CloudinarySettings>>().Value;
     return new CloudinaryPhotoRepository(settings);
 });
 
 builder.Services.AddScoped<IHotelPhotoService, HotelPhotoService>();
-builder.Services.AddScoped<IRepository<HotelPhoto>, BaseRepository<HotelPhoto>>();
 
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IUserService, UserService>();
+#endregion
 
+#region CORS
 
-
+// Configure CORS for allowed origins
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowSpecificOrigin",
-        policyBuilder => policyBuilder
+    options.AddPolicy("AllowSpecificOrigin", policyBuilder =>
+        policyBuilder
             .WithOrigins(
                 "http://localhost:5044",
                 "http://localhost:3000" // frontend
@@ -136,7 +215,11 @@ builder.Services.AddCors(options =>
             .AllowCredentials());
 });
 
-// Add JWT Authentication
+#endregion
+
+#region JWT
+
+// Configure JWT authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -150,16 +233,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
-        
-        // Add cookie extraction logic
+
+        // Extract token from cookie or Authorization header
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
-                // Try to get token from cookies first
                 context.Token = context.Request.Cookies["X-Access-Token"];
-                
-                // If no token in cookies, fall back to Authorization header
                 if (string.IsNullOrEmpty(context.Token))
                 {
                     var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
@@ -168,12 +248,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                         context.Token = authHeader.Substring("Bearer ".Length);
                     }
                 }
-                
                 return Task.CompletedTask;
             }
         };
     });
 
+#endregion
+
+#region Database Migration at Startup
 
 using (var scope = builder.Services.BuildServiceProvider().CreateScope())
 {
@@ -181,12 +263,18 @@ using (var scope = builder.Services.BuildServiceProvider().CreateScope())
     dbContext.Database.Migrate();
 }
 
+#endregion
+
 var app = builder.Build();
+
+#region Development Tools and Database Seeding
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    
+
+    // Automatically seed database with initial data
     using (var scope = app.Services.CreateScope())
     {
         var services = scope.ServiceProvider;
@@ -204,11 +292,17 @@ if (app.Environment.IsDevelopment())
         }
     }
 }
+
+#endregion
+
+#region Middleware
+
 app.UseHttpsRedirection();
 app.UseCors("AllowSpecificOrigin");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-app.Run();
+#endregion
 
+app.Run();
