@@ -310,7 +310,6 @@ BookingSystem/
 │   ├── Interfaces/                 # Service interfaces
 │   ├── Services/                   # Business logic services
 │   ├── Decorators/                 # Caching decorators
-│   └── Mapping/                    # AutoMapper profiles
 ├── BookingSystem.Domain/           # Domain layer
 │   ├── Entities/                   # Domain entities
 │   ├── Enums/                      # Domain enumerations
@@ -321,8 +320,7 @@ BookingSystem/
 │   ├── Repositories/               # Data access repositories
 │   └── Services/                   # External service implementations
 └── BookingSystem.Tests/            # Test projects
-    ├── Unit/                       # Unit tests
-    └── Integration/                # Integration tests
+   
 ```
 
 ## 🔧 Configuration
@@ -355,8 +353,6 @@ Create an `appsettings.Development.json` file for local development:
   }
 }
 ```
-
-## 🚀 Deployment
 
 ### Docker Support
 
