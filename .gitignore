@@ -60,3 +60,7 @@ bld/
 [Bb]in/
 [Oo]bj/
 [Ll]og/
+
+# Ignore configuration files containing secrets
+BookingSystem.API/appsettings.json
+BookingSystem.API/appsettings.Development.json
