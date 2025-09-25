@@ -1,10 +1,10 @@
 using AutoFixture;
-using BookingSystem.Application.RoomType;
 using BookingSystem.Application.Services;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Interfaces;
 using Moq;
 using System.Linq.Expressions;
+using BookingSystem.Application.DTOs.RoomType;
 using Xunit;
 
 namespace BookingSystem.Tests

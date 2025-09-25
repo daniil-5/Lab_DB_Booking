@@ -1,6 +1,6 @@
 using BookingSystem.Application.DTOs.HotelPhoto;
-using BookingSystem.Application.RoomType;
-namespace BookingSystem.Application.Hotel;
+
+namespace BookingSystem.Application.Dtos.Hotel;
 
 public class HotelDto
 {

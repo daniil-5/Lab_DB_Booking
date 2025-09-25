@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 using AutoFixture;
-using BookingSystem.Application.Booking;
+using BookingSystem.Application.DTOs.Booking;
 using BookingSystem.Application.Services;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Enums;

@@ -1,4 +1,6 @@
-namespace BookingSystem.Application.Hotel;
+using BookingSystem.Application.Dtos.Hotel;
+
+namespace BookingSystem.Application.DTOs.Hotel;
 
 public class HotelSearchResultDto
 {

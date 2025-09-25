@@ -1,8 +1,8 @@
-using BookingSystem.Application.Booking;
 using BookingSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using BookingSystem.Application.DTOs.Booking;
 
 [Route("api/[controller]")]
 [ApiController]

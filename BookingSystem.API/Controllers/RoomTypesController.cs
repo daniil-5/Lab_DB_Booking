@@ -1,5 +1,5 @@
+using BookingSystem.Application.DTOs.RoomType;
 using BookingSystem.Application.Interfaces;
-using BookingSystem.Application.RoomType;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

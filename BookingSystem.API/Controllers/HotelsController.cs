@@ -1,12 +1,9 @@
+using BookingSystem.Application.Dtos.Hotel;
+using BookingSystem.Application.DTOs.Hotel;
 using BookingSystem.Application.Hotel;
-using BookingSystem.Application.Services;
-using Microsoft.AspNetCore.Mvc;
-using BookingSystem.Domain.Entities;
-using BookingSystem.Infrastructure.Data;
+using BookingSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BookingSystem.API.Controllers
 {

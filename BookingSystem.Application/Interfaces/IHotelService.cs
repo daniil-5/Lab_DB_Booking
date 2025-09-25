@@ -1,5 +1,8 @@
+using BookingSystem.Application.Dtos.Hotel;
+using BookingSystem.Application.DTOs.Hotel;
 using BookingSystem.Application.Hotel;
-namespace BookingSystem.Application.Services;
+
+namespace BookingSystem.Application.Interfaces;
 
 public interface IHotelService
 {

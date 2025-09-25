@@ -1,4 +1,4 @@
-using BookingSystem.Application.Booking;
+using BookingSystem.Application.DTOs.Booking;
 
 namespace BookingSystem.Application.Interfaces;
 

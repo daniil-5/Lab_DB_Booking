@@ -1,4 +1,5 @@
 using BookingSystem.Application.DTOs.RoomPricing;
+using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Interfaces;
 

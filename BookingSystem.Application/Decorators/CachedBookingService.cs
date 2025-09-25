@@ -1,4 +1,4 @@
-using BookingSystem.Application.Booking;
+using BookingSystem.Application.DTOs.Booking;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Interfaces;
 using Microsoft.Extensions.Logging;

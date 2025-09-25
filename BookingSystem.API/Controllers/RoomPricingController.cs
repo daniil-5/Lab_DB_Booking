@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BookingSystem.Application.DTOs.RoomPricing;
+using BookingSystem.Application.Interfaces;
 using BookingSystem.Application.Services;
 
 namespace BookingSystem.Api.Controllers

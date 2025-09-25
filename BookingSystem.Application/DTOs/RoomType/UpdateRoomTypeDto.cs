@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace BookingSystem.Application.RoomType;
+namespace BookingSystem.Application.DTOs.RoomType;
 
 public class UpdateRoomTypeDto
 {

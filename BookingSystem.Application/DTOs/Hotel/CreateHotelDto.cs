@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using BookingSystem.Application.DTOs.HotelPhoto;
 
-namespace BookingSystem.Application.Hotel;
+namespace BookingSystem.Application.DTOs.Hotel;
 
 public class CreateHotelDto
 {

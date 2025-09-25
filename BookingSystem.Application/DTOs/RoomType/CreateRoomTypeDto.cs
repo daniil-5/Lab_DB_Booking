@@ -1,4 +1,4 @@
-namespace BookingSystem.Application.RoomType;
+namespace BookingSystem.Application.DTOs.RoomType;
 
 public class CreateRoomTypeDto
 {

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using BookingSystem.Application.DTOs.Hotel;
 
 namespace BookingSystem.Application.Hotel;
 
