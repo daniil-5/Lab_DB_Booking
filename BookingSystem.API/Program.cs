@@ -179,7 +179,6 @@ builder.Services.AddScoped<IUserService>(provider =>
 builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();
 builder.Services.AddScoped<IRoomPricingService, RoomPricingService>();
 builder.Services.AddScoped<DatabaseSeeder>();
-builder.Services.AddScoped<ISerializationService, SerializationService>();
 
 #endregion
 

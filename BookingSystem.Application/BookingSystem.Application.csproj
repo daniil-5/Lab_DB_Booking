@@ -11,9 +11,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="..\..\..\..\SerializatorClean\Serializator\bin\Release\net8.0\Serializator.dll">
-        <Link>Serializator.dll</Link>
-      </Content>
       <Content Include="DTOs\.DS_Store" />
     </ItemGroup>
 
