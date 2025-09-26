@@ -10,7 +10,6 @@ namespace BookingSystem.Infrastructure.Data
         protected AppDbContext() {}
         
         public DbSet<Hotel> Hotels { get; set; }
-        public DbSet<Room> Rooms { get; set; }
         public DbSet<RoomType> RoomTypes { get; set; }
         public DbSet<Booking> Bookings { get; set; }
         public DbSet<User> Users { get; set; }
@@ -21,19 +20,12 @@ namespace BookingSystem.Infrastructure.Data
         {
             // Configure table names and schema
             modelBuilder.Entity<Hotel>().ToTable("hotels");
-            modelBuilder.Entity<Room>().ToTable("rooms");
             modelBuilder.Entity<RoomType>().ToTable("room_types");
-            modelBuilder.Entity<Booking>()
-                .HasIndex("RoomId")
-                .HasName("IX_bookings_room_id")
-                .IsUnique(false)
-                .HasFilter(null)
-                .HasAnnotation("Relational:Name", "ix_bookings_room_id");
             modelBuilder.Entity<Booking>().ToTable("bookings");
             modelBuilder.Entity<User>().ToTable("users");
             modelBuilder.Entity<HotelPhoto>().ToTable("hotel_photos");
             modelBuilder.Entity<RoomPricing>().ToTable("room_pricings");
-
+            
             // Configure relationships with proper delete behavior
             
             // Hotel - RoomType relationship
@@ -43,12 +35,6 @@ namespace BookingSystem.Infrastructure.Data
                 .HasForeignKey(rt => rt.HotelId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // // RoomType - Room relationship
-            modelBuilder.Entity<RoomType>()
-                .HasMany(rt => rt.Rooms)
-                .WithOne(r => r.RoomType)
-                .HasForeignKey(r => r.RoomTypeId)
-                .OnDelete(DeleteBehavior.Cascade);
 
             // RoomType - RoomPricing relationship (updated)
             modelBuilder.Entity<RoomType>()
@@ -100,18 +86,7 @@ namespace BookingSystem.Infrastructure.Data
                 .Property(h => h.BasePrice)
                 .HasColumnType("decimal(18,2)");
             
-             modelBuilder.Entity<Hotel>(entity =>
-             {
-                 entity.ToTable("hotels");
-        
-                 // Configure Amenities as a JSON column for PostgreSQL
-                 entity.Property(rt => rt.Amenities)
-                     .HasColumnType("jsonb")
-                     .HasConversion(
-                     v => JsonSerializer.Serialize(v, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }),
-                     v => JsonSerializer.Deserialize<List<string>>(v, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }) ?? new List<string>()
-                 );
-             });
+
              
             // Configure snake_case naming convention for all entities
             foreach (var entity in modelBuilder.Model.GetEntityTypes())

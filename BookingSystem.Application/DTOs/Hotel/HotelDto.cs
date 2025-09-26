@@ -16,7 +16,7 @@ public class HotelDto
     
     public ICollection<HotelPhotoDto> Photos { get; set; } = new List<HotelPhotoDto>();
     
-    public ICollection<string> Amenities { get; set; } = new List<string>();
+
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

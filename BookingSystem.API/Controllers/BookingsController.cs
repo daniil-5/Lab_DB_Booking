@@ -16,28 +16,7 @@ public class BookingsController : ControllerBase
         _bookingService = bookingService;
     }
 
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<BookingResponseDto>>> GetBookings()
-    {
-        // Get current user ID from JWT claims
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userId))
-        {
-            return Unauthorized("User ID not found in token");
-        }
 
-        // Allow managers/admins to see all bookings, others see only their own
-        if (User.IsInRole("Manager") || User.IsInRole("Admin"))
-        {
-            var allBookings = await _bookingService.GetAllBookingsAsync();
-            return Ok(allBookings);
-        }
-        else
-        {
-            var userBookings = await _bookingService.GetBookingsByUserIdAsync(int.Parse(userId));
-            return Ok(userBookings);
-        }
-    }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<BookingResponseDto>> GetBooking(int id)
@@ -168,7 +147,7 @@ public class BookingsController : ControllerBase
         }
     }
     [HttpGet("all")]
-    // [Authorize(Roles = "Manager,Admin")]
+    [Authorize(Roles = "Manager,Admin")]
     public async Task<ActionResult<IEnumerable<BookingResponseDto>>> GetAllBookings()
     {
         var bookings = await _bookingService.GetAllBookingsAsync();

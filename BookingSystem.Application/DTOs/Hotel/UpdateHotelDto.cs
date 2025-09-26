@@ -17,5 +17,5 @@ public class UpdateHotelDto: CreateHotelDto
     
     public ICollection<Domain.Entities.Hotel> Photos { get; set; } = new List<Domain.Entities.Hotel>();
     
-    public ICollection<string> Amenities { get; set; } = new List<string>();
+
 }

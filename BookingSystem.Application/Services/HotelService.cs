@@ -27,7 +27,7 @@ public class HotelService : IHotelService
             Location = hotelDto.Location,
             Rating = hotelDto.Rating,
             BasePrice = hotelDto.BasePrice,
-            Amenities = hotelDto.Amenities?.ToList() ?? new List<string>(),
+
             CreatedAt = DateTime.UtcNow
         };
 
@@ -48,7 +48,7 @@ public class HotelService : IHotelService
         existingHotel.Location = hotelDto.Location;
         existingHotel.Rating = hotelDto.Rating;
         existingHotel.BasePrice = hotelDto.BasePrice;
-        existingHotel.Amenities = hotelDto.Amenities?.ToList() ?? existingHotel.Amenities;
+
         existingHotel.UpdatedAt = DateTime.UtcNow;
 
         await _hotelRepository.UpdateAsync(existingHotel);
@@ -133,14 +133,7 @@ public class HotelService : IHotelService
             filter = filter.And(h => h.RoomTypes.Any(rt => rt.Id == searchDto.RoomTypeId.Value && !rt.IsDeleted));
         }
 
-        // Apply amenities filter
-        if (searchDto.Amenities != null && searchDto.Amenities.Any())
-        {
-            foreach (var amenity in searchDto.Amenities)
-            {
-                filter = filter.And(h => h.Amenities.Contains(amenity));
-            }
-        }
+
 
         // Create the ordering expression
         Func<IQueryable<Domain.Entities.Hotel>, IOrderedQueryable<Domain.Entities.Hotel>> orderBy = null;
@@ -210,7 +203,7 @@ public class HotelService : IHotelService
             Location = hotel.Location,
             Rating = hotel.Rating,
             BasePrice = hotel.BasePrice,
-            Amenities = hotel.Amenities?.ToList() ?? new List<string>(),
+
             CreatedAt = hotel.CreatedAt,
             UpdatedAt = hotel.UpdatedAt,
 

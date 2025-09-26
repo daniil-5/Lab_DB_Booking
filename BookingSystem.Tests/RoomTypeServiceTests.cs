@@ -239,8 +239,7 @@ namespace BookingSystem.Tests
             var roomType = new RoomType
             {
                 Id = roomTypeId,
-                Name = "Standard Room",
-                Rooms = new List<Room>() // Empty rooms list
+                Name = "Standard Room"
             };
 
             _roomTypeRepoMock.Setup(x => x.GetByIdAsync(roomTypeId))
@@ -273,31 +272,6 @@ namespace BookingSystem.Tests
             _roomTypeRepoMock.Verify(x => x.DeleteAsync(roomTypeId), Times.Never);
         }
 
-        [Fact]
-        public async Task DeleteRoomTypeAsync_RoomTypeHasRooms_ThrowsInvalidOperationException()
-        {
-            // Arrange
-            var roomTypeId = 1;
-            var roomType = new RoomType
-            {
-                Id = roomTypeId,
-                Name = "Standard Room",
-                Rooms = new List<Room>
-                {
-                    new Room { Id = 1, RoomNumber = "101" }
-                }
-            };
-
-            _roomTypeRepoMock.Setup(x => x.GetByIdAsync(roomTypeId))
-                .ReturnsAsync(roomType);
-
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
-                _service.DeleteRoomTypeAsync(roomTypeId));
-            
-            Assert.Contains("Cannot delete room type that is in use by rooms", exception.Message);
-            _roomTypeRepoMock.Verify(x => x.DeleteAsync(roomTypeId), Times.Never);
-        }
 
         [Fact]
         public async Task GetRoomTypeByIdAsync_ExistingId_ReturnsRoomType()

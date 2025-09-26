@@ -128,40 +128,7 @@ namespace BookingSystem.Infrastructure.Repositories
             // We need to ensure the hotel has available room types for the requested dates
             var hotels = await query.ToListAsync();
             
-            var availableHotels = new List<Hotel>();
-            
-            foreach (var hotel in hotels)
-            {
-                // Check if the hotel has any room type with available capacity
-                bool hasAvailableRoomType = false;
-                
-                foreach (var roomType in hotel.RoomTypes)
-                {
-                    // Count existing bookings for this room type during the requested period
-                    var bookingCount = await _context.Bookings.CountAsync(b => 
-                        b.RoomTypeId == roomType.Id &&
-                        b.Status != (int)BookingStatus.Cancelled &&
-                        b.CheckInDate < checkOut &&
-                        b.CheckOutDate > checkIn);
-                        
-                    // Count rooms of this type
-                    var roomCount = await _context.Rooms.CountAsync(r => 
-                        r.RoomTypeId == roomType.Id && 
-                        !r.IsDeleted && 
-                        r.IsAvailable);
-                        
-                    if (roomCount > bookingCount)
-                    {
-                        hasAvailableRoomType = true;
-                        break;
-                    }
-                }
-                
-                if (hasAvailableRoomType)
-                {
-                    availableHotels.Add(hotel);
-                }
-            }
+            var availableHotels = hotels.Where(h => h.RoomTypes.Any()).ToList();
             
             // Apply pagination
             return availableHotels

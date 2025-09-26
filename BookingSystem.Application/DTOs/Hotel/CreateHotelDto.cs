@@ -22,8 +22,7 @@ public class CreateHotelDto
     [Range(0, double.MaxValue)]
     public decimal BasePrice { get; set; }
     
-    [Required]
-    public ICollection<string> Amenities { get; set; } = new List<string>();
+
     
     [Required]
     public ICollection<Domain.Entities.RoomType> RoomTypes { get; set; } = new List<Domain.Entities.RoomType>();

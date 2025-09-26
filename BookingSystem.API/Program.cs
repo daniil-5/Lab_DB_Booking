@@ -58,12 +58,14 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Hotel Booking API", Version = "v1" });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and your token.",
         Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Description = "JWT Authorization header using the Bearer scheme. Enter your token in the text input below."
     });
+
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -132,7 +134,7 @@ builder.Services.AddScoped<ICacheService, RedisCacheService>();
 builder.Services.AddScoped<IRepository<Booking>, BaseRepository<Booking>>();
 builder.Services.AddScoped<IHotelRepository, HotelRepository>();
 builder.Services.AddScoped<IRepository<RoomType>, BaseRepository<RoomType>>();
-builder.Services.AddScoped<IRepository<Room>, BaseRepository<Room>>();
+
 builder.Services.AddScoped<IRepository<RoomPricing>, BaseRepository<RoomPricing>>();
 builder.Services.AddScoped<IRepository<HotelPhoto>, BaseRepository<HotelPhoto>>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -144,7 +146,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 // Register main services for use inside decorators
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<HotelService>();
-builder.Services.AddScoped<RoomService>();
+
 builder.Services.AddScoped<UserService>();
 
 // Use cached decorator implementations instead of standard services
@@ -162,12 +164,6 @@ builder.Services.AddScoped<IHotelService>(provider =>
         provider.GetRequiredService<ILogger<CachedHotelService>>())
 );
 
-builder.Services.AddScoped<IRoomService>(provider =>
-    new CachedRoomService(
-        provider.GetRequiredService<RoomService>(),
-        provider.GetRequiredService<ICacheService>(),
-        provider.GetRequiredService<ILogger<CachedRoomService>>())
-);
 
 builder.Services.AddScoped<IUserService>(provider =>
     new CachedUserService(
@@ -254,16 +250,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 #endregion
 
-#region Database Migration at Startup
-
-using (var scope = builder.Services.BuildServiceProvider().CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    dbContext.Database.Migrate();
-}
-
-#endregion
-
 var app = builder.Build();
 
 #region Development Tools and Database Seeding
@@ -279,15 +265,18 @@ if (app.Environment.IsDevelopment())
         var services = scope.ServiceProvider;
         try
         {
+            var dbContext = services.GetRequiredService<AppDbContext>();
+            await dbContext.Database.MigrateAsync();
+            
             var seeder = services.GetRequiredService<DatabaseSeeder>();
             await seeder.SeedAsync();
-            Console.WriteLine("Database seeded successfully.");
+            Console.WriteLine("Database migrated and seeded successfully.");
         }
         catch (Exception ex)
         {
             var logger = services.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "An error occurred while seeding the database.");
-            Console.WriteLine($"Database seeding error: {ex.Message}");
+            logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+            Console.WriteLine($"Database migration/seeding error: {ex.Message}");
         }
     }
 }
@@ -295,6 +284,13 @@ if (app.Environment.IsDevelopment())
 #endregion
 
 #region Middleware
+
+// Enable Swagger always to simplify debugging
+app.UseSwagger();
+app.UseSwaggerUI();
+
+// Log requests to see failing endpoints and status codes
+app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
 app.UseCors("AllowSpecificOrigin");

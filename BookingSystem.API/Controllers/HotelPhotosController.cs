@@ -26,7 +26,7 @@ public class HotelPhotosController : ControllerBase
     /// </summary>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [Authorize]
+    [Authorize(Roles = "Manager,Admin")]
     public async Task<ActionResult<IEnumerable<HotelPhotoDto>>> GetAll()
     {
         try
@@ -86,7 +86,7 @@ public class HotelPhotosController : ControllerBase
     /// Creates a new photo record manually
     /// </summary>
     [HttpPost]
-    [Authorize]
+    [Authorize(Roles = "Manager,Admin")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<HotelPhotoDto>> Create([FromBody] CreateHotelPhotoDto photoDto)
@@ -271,7 +271,7 @@ public class HotelPhotosController : ControllerBase
     /// Syncs photos between Cloudinary and the database for a hotel
     /// </summary>
     [HttpPost("sync/{hotelId}")]
-    [Authorize]
+    [Authorize(Roles = "Manager,Admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult> SyncPhotos(int hotelId)
     {

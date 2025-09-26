@@ -56,8 +56,6 @@ namespace BookingSystem.Api.Controllers
         /// <returns>The newly created room pricing record</returns>
         [HttpPost]
         [Authorize(Roles = "Admin,Manager")]
-        [ProducesResponseType(typeof(RoomPricingDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<RoomPricingDto>> Create([FromBody] CreateRoomPricingDto pricingDto)
         {
             if (!ModelState.IsValid)
@@ -82,9 +80,6 @@ namespace BookingSystem.Api.Controllers
         /// <returns>The updated room pricing record</returns>
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,Manager")]
-        [ProducesResponseType(typeof(RoomPricingDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<RoomPricingDto>> Update(int id, [FromBody] UpdateRoomPricingDto pricingDto)
         {
             if (id != pricingDto.Id)
@@ -119,8 +114,6 @@ namespace BookingSystem.Api.Controllers
         /// <returns>No content</returns>
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin,Manager")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(int id)
         {
             try

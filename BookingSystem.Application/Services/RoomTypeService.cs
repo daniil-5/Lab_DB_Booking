@@ -76,11 +76,6 @@ public class RoomTypeService : IRoomTypeService
                 throw new KeyNotFoundException($"RoomType with ID {id} not found.");
             }
             
-            // Check if there are any rooms of this type
-            if (roomType.Rooms != null && roomType.Rooms.Any())
-            {
-                throw new InvalidOperationException("Cannot delete room type that is in use by rooms.");
-            }
             
             await _roomTypeRepository.DeleteAsync(id);
         }
@@ -113,8 +108,7 @@ public class RoomTypeService : IRoomTypeService
         
             // Get all room types for this hotel
             var roomTypes = await _roomTypeRepository.GetAllAsync(
-                rt => rt.HotelId == hotelId && !rt.IsDeleted,
-                include: query => query.Include(rt => rt.Rooms.Where(r => !r.IsDeleted)));
+                rt => rt.HotelId == hotelId && !rt.IsDeleted);
             
             return roomTypes.Select(MapToDto).ToList();
         }

@@ -17,7 +17,7 @@ public class AuthService : IAuthService
         _userService = userService;
     }
 
-    public async Task<AuthResponse> Register(RegisterUserDto registerDto)
+        public async Task<AuthResponse> Register(RegisterUserDto registerDto)
     {
         // Check if user already exists using UserService
         var existingUser = await _userService.GetUserByEmailAsync(registerDto.Email);
@@ -33,9 +33,8 @@ public class AuthService : IAuthService
             FirstName = registerDto.FirstName,
             LastName = registerDto.LastName,
             PhoneNumber = registerDto.PhoneNumber,
-            Role = UserRole.Guest // Default role for new registrations
+            Role = registerDto.Role
         };
-
         var userDto = await _userService.CreateUserAsync(createUserDto);
 
         // Create JWT token
@@ -47,7 +46,7 @@ public class AuthService : IAuthService
             Username = userDto.Username,
             FirstName = userDto.FirstName,
             LastName = userDto.LastName,
-            Role = Enum.Parse<UserRole>(userDto.Role).GetHashCode()
+            Role = (int)registerDto.Role
         };
 
         return new AuthResponse
@@ -58,7 +57,6 @@ public class AuthService : IAuthService
             Token = _jwtService.GenerateToken(userForToken)
         };
     }
-
     public async Task<AuthResponse> Login(LoginDto loginDto)
     {
         // Verify user credentials using the password verification method
@@ -93,7 +91,6 @@ public class AuthService : IAuthService
     
     public async Task<UserDto> GetUserById(int userId)
     {
-        // Directly use UserService
         return await _userService.GetUserByIdAsync(userId);
     }
 }

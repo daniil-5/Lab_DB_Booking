@@ -39,7 +39,7 @@ namespace BookingSystem.Tests
                 .With(x => x.Location, "Test Location")
                 .With(x => x.Rating, 4.5m)
                 .With(x => x.BasePrice, 150m)
-                .With(x => x.Amenities, new List<string> { "WiFi", "Parking" })
+
                 .Without(x => x.RoomTypes)
                 .Without(x => x.Photos)
                 .Create();
@@ -59,7 +59,7 @@ namespace BookingSystem.Tests
             Assert.Equal(createDto.Location, result.Location);
             Assert.Equal(createDto.Rating, result.Rating);
             Assert.Equal(createDto.BasePrice, result.BasePrice);
-            Assert.Equal(createDto.Amenities.Count, result.Amenities.Count);
+
 
             Assert.NotNull(capturedHotel);
             Assert.Equal(createDto.Name, capturedHotel.Name);
@@ -67,7 +67,7 @@ namespace BookingSystem.Tests
             Assert.Equal(createDto.Location, capturedHotel.Location);
             Assert.Equal(createDto.Rating, capturedHotel.Rating);
             Assert.Equal(createDto.BasePrice, capturedHotel.BasePrice);
-            Assert.Equal(createDto.Amenities.Count, capturedHotel.Amenities.Count);
+
         }
 
         [Fact]
@@ -83,7 +83,7 @@ namespace BookingSystem.Tests
                 Location = "Updated Location",
                 Rating = 4.8m,
                 BasePrice = 200m,
-                Amenities = new List<string> { "WiFi", "Pool", "Gym" }
+
             };
 
             var existingHotel = new Hotel
@@ -94,7 +94,7 @@ namespace BookingSystem.Tests
                 Location = "Original Location",
                 Rating = 4.0m,
                 BasePrice = 150m,
-                Amenities = new List<string> { "WiFi" }
+
             };
 
             _hotelRepoMock.Setup(x => x.GetByIdAsync(hotelId))
@@ -113,7 +113,7 @@ namespace BookingSystem.Tests
             Assert.Equal(updateDto.Location, result.Location);
             Assert.Equal(updateDto.Rating, result.Rating);
             Assert.Equal(updateDto.BasePrice, result.BasePrice);
-            Assert.Equal(updateDto.Amenities.Count, result.Amenities.Count);
+
 
             // Verify the hotel was updated
             _hotelRepoMock.Verify(x => x.UpdateAsync(It.Is<Hotel>(h => 
@@ -211,7 +211,7 @@ namespace BookingSystem.Tests
             Assert.Equal(hotel.BasePrice, result.BasePrice);
             Assert.Equal(hotel.RoomTypes.Count, result.RoomTypes.Count);
             Assert.Equal(hotel.Photos.Count, result.Photos.Count);
-            Assert.Equal(hotel.Amenities.Count, result.Amenities.Count);
+
         }
 
         [Fact]
@@ -340,7 +340,7 @@ namespace BookingSystem.Tests
                 Location = location,
                 Rating = rating,
                 BasePrice = basePrice,
-                Amenities = new List<string> { "WiFi", "Pool", "Parking" },
+
                 RoomTypes = new List<RoomType>
                 {
                     new RoomType { Id = id * 10 + 1, Name = "Standard", Capacity = 2 },

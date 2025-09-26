@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using BookingSystem.Domain.Enums;
 
 namespace BookingSystem.Application.DTOs.User;
 
@@ -15,6 +16,7 @@ public class RegisterUserDto
         ErrorMessage = "Password must contain at least one uppercase, one lowercase, one number, and one special character")]
     public string Password { get; set; }
 
+            public UserRole Role { get; set; } = UserRole.Guest;
     [Required]
     public string FirstName { get; set; }
 

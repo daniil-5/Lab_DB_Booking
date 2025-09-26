@@ -241,33 +241,9 @@ namespace BookingSystem.Application.Services
                 throw new KeyNotFoundException($"Room type with ID {roomTypeId} not found in hotel {hotelId}");
             }
 
-            // Get the total number of rooms of this type
-            var roomCount = await _roomTypeRepository.CountAsync(
-                rt => rt.Id == roomTypeId, 
-                include: rt => rt.Include(x => x.Rooms));
-
-            if (roomCount == 0)
-            {
-                return false; // No rooms of this type
-            }
-
-            // Get all bookings for this room type during the requested period
-            var query = _bookingRepository.GetQueryable()
-                .Where(b => b.RoomTypeId == roomTypeId &&
-                       b.Status != (int)BookingStatus.Cancelled &&
-                       b.CheckInDate < checkOutDate &&
-                       b.CheckOutDate > checkInDate);
-
-            // Exclude the current booking if we're checking during an update
-            if (excludeBookingId.HasValue)
-            {
-                query = query.Where(b => b.Id != excludeBookingId.Value);
-            }
-
-            var overlappingBookingsCount = await query.CountAsync();
-
-            // If there are more bookings than rooms, it's not available
-            return overlappingBookingsCount < roomCount;
+            // Since Room entity is removed, we assume availability.
+            // TODO: Implement a new way to track room inventory.
+            return true;
         }
 
         public async Task<BookingResponseDto> CancelBookingAsync(int id)

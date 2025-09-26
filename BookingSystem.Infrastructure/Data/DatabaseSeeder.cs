@@ -78,7 +78,6 @@ namespace BookingSystem.Infrastructure.Data
                 await SeedHotelsAsync();
                 await SeedHotelPhotosAsync();
                 await SeedRoomTypesAsync();
-                await SeedRoomsAsync();
                 await SeedRoomPricingsAsync();
                 await SeedBookingsAsync();
                 
@@ -319,40 +318,6 @@ namespace BookingSystem.Infrastructure.Data
             _logger.LogInformation("Seeded {count} room types", roomTypes.Count);
         }
 
-        private async Task SeedRoomsAsync()
-        {
-            if (await _context.Rooms.AnyAsync())
-            {
-                _logger.LogInformation("Rooms table already has data - skipping seeding");
-                return;
-            }
-
-            var roomTypes = await _context.RoomTypes.ToListAsync();
-            var rooms = new List<Room>();
-            
-            foreach (var roomType in roomTypes)
-            {
-                // Add 3-8 rooms per room type
-                int roomsToAdd = _random.Next(3, 9);
-                
-                for (int i = 1; i <= roomsToAdd; i++)
-                {
-                    var roomNumber = $"{roomType.Floor}{_random.Next(1, 30):D2}";
-                    rooms.Add(new Room
-                    {
-                        RoomNumber = roomNumber,
-                        RoomTypeId = roomType.Id,
-                        IsAvailable = _random.Next(10) > 1, // 90% available
-                        CreatedAt = _currentDate,
-                        IsDeleted = false
-                    });
-                }
-            }
-            
-            await _context.Rooms.AddRangeAsync(rooms);
-            await _context.SaveChangesAsync();
-            _logger.LogInformation("Seeded {count} rooms", rooms.Count);
-        }
         private async Task SeedRoomPricingsAsync()
 {
     if (await _context.RoomPricings.AnyAsync())
