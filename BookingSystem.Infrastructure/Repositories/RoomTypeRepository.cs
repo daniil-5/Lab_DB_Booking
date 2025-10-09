@@ -25,8 +25,6 @@ public class RoomTypeRepository : IRepository<RoomType>
 
     public async Task<IEnumerable<RoomType>> GetAllAsync(System.Linq.Expressions.Expression<Func<RoomType, bool>> predicate) 
     {
-        // Since we already filter by is_deleted=false in SQL, we can just return all non-deleted room types
-        // and let the predicate filter in memory for simple cases like !rt.IsDeleted
         var allRoomTypes = await GetAllAsync();
         return allRoomTypes.Where(predicate.Compile());
     }

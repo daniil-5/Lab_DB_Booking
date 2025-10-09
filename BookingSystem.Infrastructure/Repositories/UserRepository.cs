@@ -25,8 +25,6 @@ public class UserRepository : IUserRepository
 
     public async Task<IEnumerable<User>> GetAllAsync(System.Linq.Expressions.Expression<Func<User, bool>> predicate) 
     {
-        // Since we already filter by is_deleted=false in SQL, we can just return all non-deleted users
-        // and let the predicate filter in memory for simple cases like !u.IsDeleted
         var allUsers = await GetAllAsync();
         return allUsers.Where(predicate.Compile());
     }

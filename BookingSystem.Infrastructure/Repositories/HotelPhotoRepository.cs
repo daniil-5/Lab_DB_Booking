@@ -26,8 +26,6 @@ public class HotelPhotoRepository : IRepository<HotelPhoto>
 
     public async Task<IEnumerable<HotelPhoto>> GetAllAsync(System.Linq.Expressions.Expression<Func<HotelPhoto, bool>> predicate)
     {
-        // Since we already filter by is_deleted=false in SQL, we can just return all non-deleted hotel photos
-        // and let the predicate filter in memory for simple cases like !hp.IsDeleted
         var allPhotos = await GetAllAsync();
         return allPhotos.Where(predicate.Compile());
     }
