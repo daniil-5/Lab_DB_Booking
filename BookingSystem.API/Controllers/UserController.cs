@@ -105,14 +105,6 @@ namespace BookingSystem.API.Controllers
             }
         }
 
-        [HttpPost("search")]
-        [Authorize(Roles = "Admin,Manager")]
-        public async Task<ActionResult<UserSearchResultDto>> SearchUsers(UserSearchDto searchDto)
-        {
-            var result = await _userService.SearchUsersAsync(searchDto);
-            return Ok(result);
-        }
-
         [HttpPost("change-password")]
         [Authorize]
         public async Task<IActionResult> ChangePassword(ChangePasswordDto changePasswordDto)

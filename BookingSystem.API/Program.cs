@@ -91,6 +91,7 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 #region Database
 
 // Configure Dapper
+Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 builder.Services.AddSingleton(new DapperDbContext(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 #endregion
@@ -117,7 +118,6 @@ builder.Services.AddScoped<ICacheService, RedisCacheService>();
 #endregion
 
 #region Repositories
-
 builder.Services.AddScoped<IRepository<Booking>, BookingRepository>();
 builder.Services.AddScoped<IHotelRepository, HotelRepository>();
 builder.Services.AddScoped<IRepository<RoomType>, RoomTypeRepository>();

@@ -11,7 +11,6 @@ public interface IUserService
     Task<UserDto> GetUserByEmailAsync(string email);
     Task<UserDto> GetUserByUsernameAsync(string username);
     Task<IEnumerable<UserDto>> GetAllUsersAsync();
-    Task<UserSearchResultDto> SearchUsersAsync(UserSearchDto searchDto);
     Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordDto);
     
     Task<bool> VerifyUserPasswordAsync(string email, string password);

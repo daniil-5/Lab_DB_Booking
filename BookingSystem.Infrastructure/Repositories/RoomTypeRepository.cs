@@ -1,12 +1,81 @@
-
+using Dapper;
 using BookingSystem.Domain.Entities;
+using BookingSystem.Domain.Interfaces;
 using BookingSystem.Infrastructure.Data;
 
 namespace BookingSystem.Infrastructure.Repositories;
 
-public class RoomTypeRepository : BaseRepository<RoomType>
+public class RoomTypeRepository : IRepository<RoomType>
 {
-    public RoomTypeRepository(DapperDbContext context) : base(context)
+    private readonly DapperDbContext _context;
+    public RoomTypeRepository(DapperDbContext context) { _context = context; }
+
+    public async Task<RoomType> GetByIdAsync(int id)
     {
+        using var conn = _context.CreateConnection();
+        return await conn.QuerySingleOrDefaultAsync<RoomType>(
+            "select * from room_types where id=@id and is_deleted=false", new { id });
     }
+
+    public async Task<IEnumerable<RoomType>> GetAllAsync()
+    {
+        using var conn = _context.CreateConnection();
+        return await conn.QueryAsync<RoomType>("select * from room_types where is_deleted=false");
+    }
+
+    public async Task<IEnumerable<RoomType>> GetAllAsync(System.Linq.Expressions.Expression<Func<RoomType, bool>> predicate) 
+    {
+        // Since we already filter by is_deleted=false in SQL, we can just return all non-deleted room types
+        // and let the predicate filter in memory for simple cases like !rt.IsDeleted
+        var allRoomTypes = await GetAllAsync();
+        return allRoomTypes.Where(predicate.Compile());
+    }
+
+    public Task<RoomType> GetByIdAsync(int id, Func<IQueryable<RoomType>, IQueryable<RoomType>> include) 
+        => throw new NotSupportedException();
+
+    public Task<IEnumerable<RoomType>> GetAllAsync(System.Linq.Expressions.Expression<Func<RoomType, bool>> predicate = null, Func<IQueryable<RoomType>, IQueryable<RoomType>> include = null) 
+        => throw new NotSupportedException();
+
+    public async Task AddAsync(RoomType entity)
+    {
+        using var conn = _context.CreateConnection();
+        var id = await conn.ExecuteScalarAsync<int>(
+@"insert into room_types (hotel_id, name, capacity, base_price_modifier, created_at, is_deleted)
+ values (@HotelId, @Name, @Capacity, @BasePriceModifier, @CreatedAt, false)
+ returning id", entity);
+        entity.Id = id;
+    }
+
+    public async Task UpdateAsync(RoomType entity)
+    {
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(
+@"update room_types
+   set hotel_id=@HotelId, name=@Name, capacity=@Capacity, base_price_modifier=@BasePriceModifier, updated_at=@UpdatedAt
+ where id=@Id and is_deleted=false", entity);
+    }
+
+    public async Task DeleteAsync(int id)
+    {
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync("update room_types set is_deleted=true, updated_at=now() where id=@id", new { id });
+    }
+
+    public async Task<RoomType> FirstOrDefaultAsync(System.Linq.Expressions.Expression<Func<RoomType, bool>> predicate)
+        => (await GetAllAsync()).FirstOrDefault(predicate.Compile());
+
+    public Task<RoomType> FirstOrDefaultAsync(System.Linq.Expressions.Expression<Func<RoomType, bool>> predicate, Func<IQueryable<RoomType>, IQueryable<RoomType>> include)
+        => throw new NotSupportedException();
+
+    public async Task<int> CountAsync(System.Linq.Expressions.Expression<Func<RoomType, bool>> predicate = null)
+    {
+        using var conn = _context.CreateConnection();
+        return await conn.ExecuteScalarAsync<int>("select count(*) from room_types where is_deleted=false");
+    }
+
+    public Task<int> CountAsync(System.Linq.Expressions.Expression<Func<RoomType, bool>> predicate, Func<IQueryable<RoomType>, IQueryable<RoomType>> include)
+        => throw new NotSupportedException();
+
+    public IQueryable<RoomType> GetQueryable() => throw new NotSupportedException();
 }

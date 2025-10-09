@@ -1,55 +1,140 @@
-
-using System.Linq.Expressions;
+// HotelRepository.cs
+using Dapper;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Interfaces;
 using BookingSystem.Infrastructure.Data;
-using Dapper;
 
 namespace BookingSystem.Infrastructure.Repositories;
 
-public class HotelRepository : BaseRepository<Hotel>, IHotelRepository
+public class HotelRepository : IHotelRepository
 {
-    public HotelRepository(DapperDbContext context) : base(context)
+    private readonly DapperDbContext _context;
+    public HotelRepository(DapperDbContext context) { _context = context; }
+
+    public async Task<Hotel> GetByIdAsync(int id)
     {
+        using var conn = _context.CreateConnection();
+        return await conn.QuerySingleOrDefaultAsync<Hotel>(
+            "select * from hotels where id=@id and is_deleted=false", new { id });
     }
 
-    public async Task<(IEnumerable<Hotel> hotels, int totalCount)> SearchHotelsAsync(Expression<Func<Hotel, bool>> filter = null, Func<IQueryable<Hotel>, IOrderedQueryable<Hotel>> orderBy = null, int pageNumber = 1, int pageSize = 10, bool includeRoomTypes = false, bool includePhotos = false)
+    public async Task<IEnumerable<Hotel>> GetAllAsync()
     {
-        // Dapper does not support IQueryable and Expression trees directly. 
-        // This method would need to be re-implemented with raw SQL and dynamic query building.
-        // For now, we will return an empty result.
-        return (new List<Hotel>(), 0);
+        using var conn = _context.CreateConnection();
+        return await conn.QueryAsync<Hotel>("select * from hotels where is_deleted=false");
     }
 
-    public async Task<IEnumerable<Hotel>> GetHotelsWithDetailsAsync(Expression<Func<Hotel, bool>> filter = null, int pageNumber = 1, int pageSize = 10)
+    public async Task<IEnumerable<Hotel>> GetAllAsync(System.Linq.Expressions.Expression<Func<Hotel, bool>> predicate) 
     {
-        // This method would also require dynamic SQL generation based on the filter expression.
-        // Returning an empty list for now.
-        return new List<Hotel>();
+        // Since we already filter by is_deleted=false in SQL, we can just return all non-deleted hotels
+        // and let the predicate filter in memory for simple cases like !h.IsDeleted
+        var allHotels = await GetAllAsync();
+        return allHotels.Where(predicate.Compile());
+    }
+
+    public Task<Hotel> GetByIdAsync(int id, Func<IQueryable<Hotel>, IQueryable<Hotel>> include) 
+        => throw new NotSupportedException();
+
+    public Task<IEnumerable<Hotel>> GetAllAsync(System.Linq.Expressions.Expression<Func<Hotel, bool>> predicate = null, Func<IQueryable<Hotel>, IQueryable<Hotel>> include = null) 
+        => throw new NotSupportedException();
+
+    public async Task AddAsync(Hotel entity)
+    {
+        using var conn = _context.CreateConnection();
+        var id = await conn.ExecuteScalarAsync<int>(
+@"insert into hotels (name, description, location, rating, base_price, created_at, is_deleted)
+ values (@Name, @Description, @Location, @Rating, @BasePrice, @CreatedAt, false)
+ returning id", entity);
+        entity.Id = id;
+    }
+
+    public async Task UpdateAsync(Hotel entity)
+    {
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(
+@"update hotels
+   set name=@Name, description=@Description, location=@Location, rating=@Rating, base_price=@BasePrice, updated_at=@UpdatedAt
+ where id=@Id and is_deleted=false", entity);
+    }
+
+    public async Task DeleteAsync(int id)
+    {
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync("update hotels set is_deleted=true, updated_at=now() where id=@id", new { id });
+    }
+
+    public async Task<Hotel> FirstOrDefaultAsync(System.Linq.Expressions.Expression<Func<Hotel, bool>> predicate)
+        => (await GetAllAsync()).FirstOrDefault(predicate.Compile());
+
+    public Task<Hotel> FirstOrDefaultAsync(System.Linq.Expressions.Expression<Func<Hotel, bool>> predicate, Func<IQueryable<Hotel>, IQueryable<Hotel>> include)
+        => throw new NotSupportedException();
+
+    public async Task<int> CountAsync(System.Linq.Expressions.Expression<Func<Hotel, bool>> predicate = null)
+    {
+        using var conn = _context.CreateConnection();
+        return await conn.ExecuteScalarAsync<int>("select count(*) from hotels where is_deleted=false");
+    }
+
+    public Task<int> CountAsync(System.Linq.Expressions.Expression<Func<Hotel, bool>> predicate, Func<IQueryable<Hotel>, IQueryable<Hotel>> include)
+        => throw new NotSupportedException();
+
+    public IQueryable<Hotel> GetQueryable() => throw new NotSupportedException();
+    
+    public async Task<(IEnumerable<Hotel> hotels, int totalCount)> SearchHotelsAsync(
+        System.Linq.Expressions.Expression<Func<Hotel, bool>> filter = null,
+        Func<IQueryable<Hotel>, IOrderedQueryable<Hotel>> orderBy = null,
+        int pageNumber = 1,
+        int pageSize = 10,
+        bool includeRoomTypes = false,
+        bool includePhotos = false)
+    {
+        using var conn = _context.CreateConnection();
+        var offset = (pageNumber - 1) * pageSize;
+
+        var items = await conn.QueryAsync<Hotel>(
+            "select * from hotels where is_deleted=false order by id limit @pageSize offset @offset",
+            new { pageSize, offset });
+
+        var total = await conn.ExecuteScalarAsync<int>(
+            "select count(*) from hotels where is_deleted=false");
+
+        return (items, total);
+    }
+
+    public async Task<IEnumerable<Hotel>> GetHotelsWithDetailsAsync(
+        System.Linq.Expressions.Expression<Func<Hotel, bool>> filter = null,
+        int pageNumber = 1,
+        int pageSize = 10)
+    {
+        var (hotels, _) = await SearchHotelsAsync(null, null, pageNumber, pageSize);
+        return hotels;
     }
 
     public async Task<Hotel> GetHotelWithDetailsAsync(int id)
     {
-        using var connection = _context.CreateConnection();
-        var hotelSql = "SELECT * FROM \"Hotels\" WHERE \"Id\" = @Id AND \"IsDeleted\" = false";
-        var hotel = await connection.QuerySingleOrDefaultAsync<Hotel>(hotelSql, new { Id = id });
+        using var conn = _context.CreateConnection();
 
-        if (hotel != null)
-        {
-            var roomTypesSql = "SELECT * FROM \"RoomTypes\" WHERE \"HotelId\" = @HotelId AND \"IsDeleted\" = false";
-            hotel.RoomTypes = (await connection.QueryAsync<RoomType>(roomTypesSql, new { HotelId = id })).ToList();
+        var hotel = await conn.QuerySingleOrDefaultAsync<Hotel>(
+            "select * from hotels where id=@id and is_deleted=false", new { id });
+        if (hotel == null) return null;
 
-            var photosSql = "SELECT * FROM \"HotelPhotos\" WHERE \"HotelId\" = @HotelId AND \"IsDeleted\" = false";
-            hotel.Photos = (await connection.QueryAsync<HotelPhoto>(photosSql, new { HotelId = id })).ToList();
-        }
+        var roomTypes = await conn.QueryAsync<RoomType>(
+            "select * from room_types where hotel_id=@hotelId and is_deleted=false",
+            new { hotelId = id });
+        hotel.RoomTypes = roomTypes.ToList();
+
+        var photos = await conn.QueryAsync<HotelPhoto>(
+            "select * from hotel_photos where hotel_id=@hotelId and is_deleted=false",
+            new { hotelId = id });
+        hotel.Photos = photos.ToList();
 
         return hotel;
     }
 
-    public async Task<IEnumerable<Hotel>> SearchHotelsByAvailabilityAsync(string location, DateTime checkIn, DateTime checkOut, int guests, int pageNumber = 1, int pageSize = 10)
+    public Task<IEnumerable<Hotel>> SearchHotelsByAvailabilityAsync(
+        string location, DateTime checkIn, DateTime checkOut, int guests,
+        int pageNumber = 1, int pageSize = 10)
     {
-        // This is a complex query that would require a sophisticated SQL query to implement correctly with Dapper.
-        // Returning an empty list for now.
-        return new List<Hotel>();
+        return Task.FromResult<IEnumerable<Hotel>>(Array.Empty<Hotel>());
     }
 }

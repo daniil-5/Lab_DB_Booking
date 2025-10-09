@@ -1,52 +1,89 @@
-
-using System.Linq.Expressions;
+using Dapper;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Interfaces;
 using BookingSystem.Infrastructure.Data;
-using Dapper;
 
 namespace BookingSystem.Infrastructure.Repositories;
 
-public class UserRepository : BaseRepository<User>, IUserRepository
+public class UserRepository : IUserRepository
 {
-    public UserRepository(DapperDbContext context) : base(context)
+    private readonly DapperDbContext _context;
+    public UserRepository(DapperDbContext context) { _context = context; }
+
+    public async Task<User> GetByIdAsync(int id)
     {
+        using var conn = _context.CreateConnection();
+        return await conn.QuerySingleOrDefaultAsync<User>(
+            "select * from users where id=@id and is_deleted=false", new { id });
     }
+
+    public async Task<IEnumerable<User>> GetAllAsync()
+    {
+        using var conn = _context.CreateConnection();
+        return await conn.QueryAsync<User>("select * from users where is_deleted=false");
+    }
+
+    public async Task<IEnumerable<User>> GetAllAsync(System.Linq.Expressions.Expression<Func<User, bool>> predicate) 
+    {
+        // Since we already filter by is_deleted=false in SQL, we can just return all non-deleted users
+        // and let the predicate filter in memory for simple cases like !u.IsDeleted
+        var allUsers = await GetAllAsync();
+        return allUsers.Where(predicate.Compile());
+    }
+
+    public Task<User> GetByIdAsync(int id, Func<IQueryable<User>, IQueryable<User>> include) 
+        => throw new NotSupportedException();
+
+    public Task<IEnumerable<User>> GetAllAsync(System.Linq.Expressions.Expression<Func<User, bool>> predicate = null, Func<IQueryable<User>, IQueryable<User>> include = null) 
+        => throw new NotSupportedException();
+
+    public async Task AddAsync(User entity)
+    {
+        using var conn = _context.CreateConnection();
+        var id = await conn.ExecuteScalarAsync<int>(
+@"insert into users (username, email, password_hash, first_name, last_name, phone_number, role, created_at, is_deleted)
+ values (@Username, @Email, @PasswordHash, @FirstName, @LastName, @PhoneNumber, @Role, @CreatedAt, false)
+ returning id", entity);
+        entity.Id = id;
+    }
+
+    public async Task UpdateAsync(User entity)
+    {
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync(
+@"update users
+   set username=@Username, email=@Email, password_hash=@PasswordHash, first_name=@FirstName, last_name=@LastName,
+       phone_number=@PhoneNumber, role=@Role, updated_at=@UpdatedAt
+ where id=@Id and is_deleted=false", entity);
+    }
+
+    public async Task DeleteAsync(int id)
+    {
+        using var conn = _context.CreateConnection();
+        await conn.ExecuteAsync("update users set is_deleted=true, updated_at=now() where id=@id", new { id });
+    }
+
+    public async Task<User> FirstOrDefaultAsync(System.Linq.Expressions.Expression<Func<User, bool>> predicate)
+        => (await GetAllAsync()).FirstOrDefault(predicate.Compile());
+
+    public Task<User> FirstOrDefaultAsync(System.Linq.Expressions.Expression<Func<User, bool>> predicate, Func<IQueryable<User>, IQueryable<User>> include)
+        => throw new NotSupportedException();
+
+    public async Task<int> CountAsync(System.Linq.Expressions.Expression<Func<User, bool>> predicate = null)
+    {
+        using var conn = _context.CreateConnection();
+        return await conn.ExecuteScalarAsync<int>("select count(*) from users where is_deleted=false");
+    }
+
+    public Task<int> CountAsync(System.Linq.Expressions.Expression<Func<User, bool>> predicate, Func<IQueryable<User>, IQueryable<User>> include)
+        => throw new NotSupportedException();
+
+    public IQueryable<User> GetQueryable() => throw new NotSupportedException();
 
     public async Task<User> GetByEmailAsync(string email)
     {
-        using var connection = _context.CreateConnection();
-        var sql = "SELECT * FROM \"Users\" WHERE \"Email\" = @Email AND \"IsDeleted\" = false";
-        return await connection.QuerySingleOrDefaultAsync<User>(sql, new { Email = email });
-    }
-
-    public async Task<(IEnumerable<User> users, int totalCount)> SearchUsersAsync(Expression<Func<User, bool>> filter = null, Func<IQueryable<User>, IOrderedQueryable<User>> orderBy = null, int pageNumber = 1, int pageSize = 10)
-    {
-        // Dapper does not support IQueryable and Expression trees directly. 
-        // This method would need to be re-implemented with raw SQL and dynamic query building.
-        // For now, we will return an empty result.
-        return (new List<User>(), 0);
-    }
-
-    public async Task<User> GetUserWithDetailsAsync(int userId)
-    {
-        using var connection = _context.CreateConnection();
-        var userSql = "SELECT * FROM \"Users\" WHERE \"Id\" = @UserId AND \"IsDeleted\" = false";
-        var user = await connection.QuerySingleOrDefaultAsync<User>(userSql, new { UserId = userId });
-
-        if (user != null)
-        {
-            var bookingsSql = "SELECT * FROM \"Bookings\" WHERE \"UserId\" = @UserId AND \"IsDeleted\" = false";
-            user.Bookings = (await connection.QueryAsync<Booking>(bookingsSql, new { UserId = userId })).ToList();
-        }
-
-        return user;
-    }
-
-    public async Task<bool> EmailExistsAsync(string email)
-    {
-        using var connection = _context.CreateConnection();
-        var sql = "SELECT COUNT(1) FROM \"Users\" WHERE \"Email\" = @Email AND \"IsDeleted\" = false";
-        return await connection.ExecuteScalarAsync<bool>(sql, new { Email = email });
+        using var conn = _context.CreateConnection();
+        return await conn.QuerySingleOrDefaultAsync<User>(
+            "select * from users where email=@email and is_deleted=false", new { email });
     }
 }

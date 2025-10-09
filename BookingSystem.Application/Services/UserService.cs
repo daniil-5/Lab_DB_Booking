@@ -108,30 +108,7 @@ namespace BookingSystem.Application.Services
             var users = await _userRepository.GetAllAsync();
             return users.Select(MapToDto).ToList();
         }
-
-        public async Task<UserSearchResultDto> SearchUsersAsync(UserSearchDto searchDto)
-        {
-            var (users, totalCount) = await _userRepository.SearchUsersAsync(null, null, searchDto.PageNumber, searchDto.PageSize);
-
-            // Calculate pagination values
-            var totalPages = (int)Math.Ceiling(totalCount / (double)searchDto.PageSize);
-            var hasPrevious = searchDto.PageNumber > 1;
-            var hasNext = searchDto.PageNumber < totalPages;
-
-            
-            var userDtos = users.Select(MapToDto).ToList();
-            
-            return new UserSearchResultDto
-            {
-                Users = userDtos,
-                TotalCount = totalCount,
-                PageNumber = searchDto.PageNumber,
-                PageSize = searchDto.PageSize,
-                TotalPages = totalPages,
-                HasPrevious = hasPrevious,
-                HasNext = hasNext
-            };
-        }
+        
 
         public async Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordDto)
         {

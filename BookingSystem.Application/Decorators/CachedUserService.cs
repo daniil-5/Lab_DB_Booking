@@ -219,40 +219,6 @@ public class CachedUserService : IUserService
         return users;
     }
 
-    public async Task<UserSearchResultDto> SearchUsersAsync(UserSearchDto searchDto)
-    {
-        // Create a cache key based on search parameters
-        var searchKey = GenerateSearchCacheKey(searchDto);
-        var cacheKey = string.Format(USER_SEARCH_KEY, searchKey);
-        
-        // Try to get from cache first
-        var cachedResult = await _cacheService.GetAsync<UserSearchResultDto>(cacheKey);
-        if (cachedResult != null)
-        {
-            _logger.LogDebug("Search result found in cache for key: {SearchKey}", searchKey);
-            return cachedResult;
-        }
-        
-        _logger.LogDebug("Search result not found in cache, executing search for key: {SearchKey}", searchKey);
-        
-        // Get from underlying service if not in cache
-        var searchResult = await _userService.SearchUsersAsync(searchDto);
-        
-        // Cache the search result with shorter expiration
-        await _cacheService.SetAsync(cacheKey, searchResult, SearchCacheExpiration);
-        
-        // Also cache individual users from the search result
-        foreach (var user in searchResult.Users)
-        {
-            await CacheUser(user);
-        }
-        
-        _logger.LogDebug("Search result cached for key: {SearchKey}, count: {ResultCount}", 
-            searchKey, searchResult.Users.Count());
-        
-        return searchResult;
-    }
-
     public async Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordDto)
     {
         _logger.LogInformation("Changing password for user ID: {UserId}", changePasswordDto.UserId);
@@ -278,8 +244,6 @@ public class CachedUserService : IUserService
 
     public async Task<bool> VerifyUserPasswordAsync(string email, string password)
     {
-        // This method doesn't need caching as it involves password verification
-        // and shouldn't cache sensitive operations
         return await _userService.VerifyUserPasswordAsync(email, password);
     }
 
