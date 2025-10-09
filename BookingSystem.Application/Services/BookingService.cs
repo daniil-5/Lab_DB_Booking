@@ -3,7 +3,6 @@ using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Enums;
 using BookingSystem.Domain.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 
 namespace BookingSystem.Application.Services
@@ -29,20 +28,14 @@ namespace BookingSystem.Application.Services
 
         public async Task<BookingResponseDto> GetBookingByIdAsync(int id)
         {
-            var booking = await _bookingRepository.GetByIdAsync(id, 
-                include: b => b.Include(x => x.Hotel)
-                               .Include(x => x.RoomType)
-                               .Include(x => x.User));
+            var booking = await _bookingRepository.GetByIdAsync(id);
                                
             return booking != null ? MapToDto(booking) : null;
         }
 
         public async Task<IEnumerable<BookingResponseDto>> GetAllBookingsAsync()
         {
-            var bookings = await _bookingRepository.GetAllAsync(
-                include: query => query.Include(b => b.Hotel)
-                                      .Include(b => b.RoomType)
-                                      .Include(b => b.User));
+            var bookings = await _bookingRepository.GetAllAsync();
                                       
             return bookings.Select(MapToDto);
         }
@@ -195,11 +188,7 @@ namespace BookingSystem.Application.Services
             {
                 
                 var bookings = await _bookingRepository.GetAllAsync(
-                    b => b.UserId == userId && !b.IsDeleted,
-                    include: query => query
-                        .Include(b => b.Hotel)
-                        .Include(b => b.RoomType)
-                        .Include(b => b.User)
+                    b => b.UserId == userId && !b.IsDeleted
                 );
                                   
                 return bookings.Select(MapToDto);
@@ -262,10 +251,7 @@ namespace BookingSystem.Application.Services
         public async Task<IEnumerable<BookingResponseDto>> GetBookingsByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
             var bookings = await _bookingRepository.GetAllAsync(
-                b => b.CheckInDate >= startDate && b.CheckOutDate <= endDate,
-                include: query => query.Include(b => b.Hotel)
-                                      .Include(b => b.RoomType)
-                                      .Include(b => b.User));
+                b => b.CheckInDate >= startDate && b.CheckOutDate <= endDate);
 
             return bookings.Select(MapToDto);
         }
@@ -288,9 +274,7 @@ namespace BookingSystem.Application.Services
         public async Task<IEnumerable<BookingResponseDto>> GetBookingsByRoomTypeIdAsync(int roomTypeId)
         {
             var bookings = await _bookingRepository.GetAllAsync(
-                b => b.RoomTypeId == roomTypeId,
-                include: query => query.Include(b => b.Hotel)
-                                      .Include(b => b.User));
+                b => b.RoomTypeId == roomTypeId);
                                       
             return bookings.Select(MapToDto);
         }
@@ -298,9 +282,7 @@ namespace BookingSystem.Application.Services
         public async Task<IEnumerable<BookingResponseDto>> GetBookingsByHotelIdAsync(int hotelId)
         {
             var bookings = await _bookingRepository.GetAllAsync(
-                b => b.HotelId == hotelId,
-                include: query => query.Include(b => b.RoomType)
-                                      .Include(b => b.User));
+                b => b.HotelId == hotelId);
                                       
             return bookings.Select(MapToDto);
         }

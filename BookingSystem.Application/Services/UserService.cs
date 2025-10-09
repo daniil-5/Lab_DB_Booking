@@ -111,69 +111,7 @@ namespace BookingSystem.Application.Services
 
         public async Task<UserSearchResultDto> SearchUsersAsync(UserSearchDto searchDto)
         {
-            // Create the filter expression
-            Expression<Func<User, bool>> filter = user => true;
-
-            // Apply search term filter to username, email, first name, or last name
-            if (!string.IsNullOrEmpty(searchDto.SearchTerm))
-            {
-                var term = searchDto.SearchTerm.ToLower();
-                filter = filter.And(u => 
-                    u.Username.ToLower().Contains(term) || 
-                    u.Email.ToLower().Contains(term) || 
-                    u.FirstName.ToLower().Contains(term) || 
-                    u.LastName.ToLower().Contains(term));
-            }
-
-            // Apply role filter
-            if (searchDto.Role.HasValue)
-            {
-                filter = filter.And(u => u.Role == (int)searchDto.Role.Value);
-            }
-
-            // Create the ordering expression
-            Func<IQueryable<User>, IOrderedQueryable<User>> orderBy = null;
-            switch (searchDto.SortBy.ToLower())
-            {
-                case "username":
-                    orderBy = query => searchDto.SortDescending
-                        ? query.OrderByDescending(u => u.Username)
-                        : query.OrderBy(u => u.Username);
-                    break;
-                case "email":
-                    orderBy = query => searchDto.SortDescending
-                        ? query.OrderByDescending(u => u.Email)
-                        : query.OrderBy(u => u.Email);
-                    break;
-                case "firstname":
-                    orderBy = query => searchDto.SortDescending
-                        ? query.OrderByDescending(u => u.FirstName)
-                        : query.OrderBy(u => u.FirstName);
-                    break;
-                case "lastname":
-                    orderBy = query => searchDto.SortDescending
-                        ? query.OrderByDescending(u => u.LastName)
-                        : query.OrderBy(u => u.LastName);
-                    break;
-                case "role":
-                    orderBy = query => searchDto.SortDescending
-                        ? query.OrderByDescending(u => u.Role)
-                        : query.OrderBy(u => u.Role);
-                    break;
-                default:
-                    orderBy = query => searchDto.SortDescending
-                        ? query.OrderByDescending(u => u.CreatedAt)
-                        : query.OrderBy(u => u.CreatedAt);
-                    break;
-            }
-
-            // Execute the search
-            var (users, totalCount) = await _userRepository.SearchUsersAsync(
-                filter,
-                orderBy,
-                searchDto.PageNumber,
-                searchDto.PageSize
-            );
+            var (users, totalCount) = await _userRepository.SearchUsersAsync(null, null, searchDto.PageNumber, searchDto.PageSize);
 
             // Calculate pagination values
             var totalPages = (int)Math.Ceiling(totalCount / (double)searchDto.PageSize);

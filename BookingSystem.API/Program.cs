@@ -8,10 +8,10 @@ using BookingSystem.Application.Services;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Interfaces;
 using BookingSystem.Domain.Other;
-using Microsoft.EntityFrameworkCore;
+
 using BookingSystem.Infrastructure.Repositories;
 using BookingSystem.Infrastructure.Services;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
@@ -90,21 +90,8 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 
 #region Database
 
-// Configure Entity Framework Core with PostgreSQL
-builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
-    options.EnableSensitiveDataLogging(); // Only for debugging!
-    options.EnableDetailedErrors();
-
-    // Reset EF Core model cache (usually not required)
-    var serviceProvider = options.Options.FindExtension<CoreOptionsExtension>()?.ApplicationServiceProvider;
-    if (serviceProvider != null)
-    {
-        var modelCache = serviceProvider.GetService<IMemoryCache>();
-        modelCache?.Remove(typeof(AppDbContext));
-    }
-});
+// Configure Dapper
+builder.Services.AddSingleton(new DapperDbContext(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 #endregion
 
@@ -174,7 +161,7 @@ builder.Services.AddScoped<IUserService>(provider =>
 
 builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();
 builder.Services.AddScoped<IRoomPricingService, RoomPricingService>();
-builder.Services.AddScoped<DatabaseSeeder>();
+
 
 #endregion
 
@@ -254,32 +241,7 @@ var app = builder.Build();
 
 #region Development Tools and Database Seeding
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
 
-    // Automatically seed database with initial data
-    using (var scope = app.Services.CreateScope())
-    {
-        var services = scope.ServiceProvider;
-        try
-        {
-            var dbContext = services.GetRequiredService<AppDbContext>();
-            await dbContext.Database.MigrateAsync();
-            
-            var seeder = services.GetRequiredService<DatabaseSeeder>();
-            await seeder.SeedAsync();
-            Console.WriteLine("Database migrated and seeded successfully.");
-        }
-        catch (Exception ex)
-        {
-            var logger = services.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "An error occurred while migrating or seeding the database.");
-            Console.WriteLine($"Database migration/seeding error: {ex.Message}");
-        }
-    }
-}
 
 #endregion
 

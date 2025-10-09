@@ -1,7 +1,6 @@
 using BookingSystem.Application.DTOs.RoomType;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace BookingSystem.Application.Services;
 

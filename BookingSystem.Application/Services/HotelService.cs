@@ -5,7 +5,6 @@ using BookingSystem.Application.DTOs.HotelPhoto;
 using BookingSystem.Application.Hotel;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace BookingSystem.Application.Services;
 
@@ -68,10 +67,7 @@ public class HotelService : IHotelService
 
     public async Task<HotelDto> GetHotelByIdAsync(int id)
     {
-        var hotel = await _hotelRepository.GetByIdAsync(id,
-            include: query => query
-                .Include(h => h.RoomTypes.Where(rt => !rt.IsDeleted))
-                .Include(h => h.Photos.Where(p => !p.IsDeleted)));
+        var hotel = await _hotelRepository.GetByIdAsync(id);
 
         return hotel != null ? MapToDto(hotel) : null;
     }
@@ -79,98 +75,14 @@ public class HotelService : IHotelService
     public async Task<IEnumerable<HotelDto>> GetAllHotelsAsync()
     {
         var hotels = await _hotelRepository.GetAllAsync(
-            predicate: h => !h.IsDeleted,
-            include: query => query
-                .Include(h => h.RoomTypes.Where(rt => !rt.IsDeleted))
-                .Include(h => h.Photos.Where(p => !p.IsDeleted)));
+            predicate: h => !h.IsDeleted);
 
         return hotels.Select(MapToDto).ToList();
     }
 
     public async Task<HotelSearchResultDto> SearchHotelsAsync(HotelSearchDto searchDto)
     {
-        // Create the filter expression
-        Expression<Func<Domain.Entities.Hotel, bool>>
-            filter = hotel => !hotel.IsDeleted; // Start with non-deleted hotels
-
-        // Apply name filter
-        if (!string.IsNullOrEmpty(searchDto.Name))
-        {
-            filter = filter.And(h => h.Name.ToLower().Contains(searchDto.Name.ToLower()));
-        }
-
-        // Apply location filter
-        if (!string.IsNullOrEmpty(searchDto.Location))
-        {
-            filter = filter.And(h => h.Location.ToLower().Contains(searchDto.Location.ToLower()));
-        }
-
-        // Apply rating range filter
-        if (searchDto.MinRating.HasValue)
-        {
-            filter = filter.And(h => h.Rating >= searchDto.MinRating.Value);
-        }
-
-        if (searchDto.MaxRating.HasValue)
-        {
-            filter = filter.And(h => h.Rating <= searchDto.MaxRating.Value);
-        }
-
-        // Apply price range filter
-        if (searchDto.MinPrice.HasValue)
-        {
-            filter = filter.And(h => h.BasePrice >= searchDto.MinPrice.Value);
-        }
-
-        if (searchDto.MaxPrice.HasValue)
-        {
-            filter = filter.And(h => h.BasePrice <= searchDto.MaxPrice.Value);
-        }
-
-        // Apply room type filter
-        if (searchDto.RoomTypeId.HasValue)
-        {
-            filter = filter.And(h => h.RoomTypes.Any(rt => rt.Id == searchDto.RoomTypeId.Value && !rt.IsDeleted));
-        }
-
-
-
-        // Create the ordering expression
-        Func<IQueryable<Domain.Entities.Hotel>, IOrderedQueryable<Domain.Entities.Hotel>> orderBy = null;
-        switch (searchDto.SortBy?.ToLower() ?? "rating")
-        {
-            case "name":
-                orderBy = query => searchDto.SortDescending
-                    ? query.OrderByDescending(h => h.Name)
-                    : query.OrderBy(h => h.Name);
-                break;
-            case "location":
-                orderBy = query => searchDto.SortDescending
-                    ? query.OrderByDescending(h => h.Location)
-                    : query.OrderBy(h => h.Location);
-                break;
-            case "price":
-                orderBy = query => searchDto.SortDescending
-                    ? query.OrderByDescending(h => h.BasePrice)
-                    : query.OrderBy(h => h.BasePrice);
-                break;
-            case "rating":
-            default:
-                orderBy = query => searchDto.SortDescending
-                    ? query.OrderByDescending(h => h.Rating)
-                    : query.OrderBy(h => h.Rating);
-                break;
-        }
-
-        // Execute the search
-        var (hotels, totalCount) = await _hotelRepository.SearchHotelsAsync(
-            filter,
-            orderBy,
-            searchDto.PageNumber,
-            searchDto.PageSize,
-            includeRoomTypes: true,
-            includePhotos: true
-        );
+        var (hotels, totalCount) = await _hotelRepository.SearchHotelsAsync(null, null, searchDto.PageNumber, searchDto.PageSize);
 
         // Calculate pagination values
         var totalPages = (int)Math.Ceiling(totalCount / (double)searchDto.PageSize);
@@ -228,35 +140,3 @@ public class HotelService : IHotelService
         };
     }
 }
-
-public static class ExpressionExtensions
-    {
-      public static Expression<Func<T, bool>> And<T>(this Expression<Func<T, bool>> left,
-          Expression<Func<T, bool>> right)
-      {
-          var parameter = Expression.Parameter(typeof(T));
-          var leftVisitor = new ReplaceParameterVisitor(left.Parameters[0], parameter);
-          var leftBody = leftVisitor.Visit(left.Body);
-          var rightVisitor = new ReplaceParameterVisitor(right.Parameters[0], parameter);
-          var rightBody = rightVisitor.Visit(right.Body);
-          return Expression.Lambda<Func<T, bool>>(
-              Expression.AndAlso(leftBody, rightBody), parameter);
-      }
-
-        private class ReplaceParameterVisitor : System.Linq.Expressions.ExpressionVisitor
-        {
-             private readonly ParameterExpression _old;
-            private readonly ParameterExpression _new;
-
-            public ReplaceParameterVisitor(ParameterExpression old, ParameterExpression @new)
-            {
-              _old = old;
-              _new = @new;
-            }
-
-             protected override Expression VisitParameter(ParameterExpression node)
-            {
-              return node == _old ? _new : base.VisitParameter(node);
-            }
-        }
-    }
