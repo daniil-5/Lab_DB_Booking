@@ -118,12 +118,11 @@ builder.Services.AddScoped<ICacheService, RedisCacheService>();
 
 #region Repositories
 
-builder.Services.AddScoped<IRepository<Booking>, BaseRepository<Booking>>();
+builder.Services.AddScoped<IRepository<Booking>, BookingRepository>();
 builder.Services.AddScoped<IHotelRepository, HotelRepository>();
-builder.Services.AddScoped<IRepository<RoomType>, BaseRepository<RoomType>>();
-
-builder.Services.AddScoped<IRepository<RoomPricing>, BaseRepository<RoomPricing>>();
-builder.Services.AddScoped<IRepository<HotelPhoto>, BaseRepository<HotelPhoto>>();
+builder.Services.AddScoped<IRepository<RoomType>, RoomTypeRepository>();
+builder.Services.AddScoped<IRepository<RoomPricing>, RoomPricingRepository>();
+builder.Services.AddScoped<IRepository<HotelPhoto>, HotelPhotoRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 #endregion
