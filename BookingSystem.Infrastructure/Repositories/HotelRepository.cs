@@ -194,7 +194,6 @@ public async Task<IEnumerable<HotelAvailability>> SearchAvailableHotelsAsync(
             rt.capacity AS Capacity,
             rt.base_price AS Price,
             rt.area AS Area,
-            rt.amenities AS Amenities,
             COUNT(DISTINCT hp.id) AS PhotoCount,
             (
                 SELECT COUNT(*)
@@ -215,7 +214,7 @@ public async Task<IEnumerable<HotelAvailability>> SearchAvailableHotelsAsync(
         AND h.location ILIKE @location
         AND rt.capacity >= @guestCount
         GROUP BY h.id, h.name, h.location, h.rating, h.description, 
-                 rt.id, rt.name, rt.capacity, rt.base_price, rt.area, rt.amenities
+                 rt.id, rt.name, rt.capacity, rt.base_price, rt.area
         HAVING COUNT(DISTINCT hp.id) > 0  -- only hotels with photos
         ORDER BY h.rating DESC, rt.base_price ASC";
     
@@ -401,8 +400,7 @@ public async Task<IEnumerable<BookingDetails>> GetBookingsWithDetailsAsync(
             rt.name AS RoomTypeName,
             rt.capacity AS RoomCapacity,
             rt.area AS RoomArea,
-            rt.base_price AS RoomBasePrice,
-            rt.amenities AS RoomAmenities,
+            rt.base_price AS RoomBasePrice
             (SELECT url FROM hotel_photos WHERE hotel_id = h.id AND is_main = true AND is_deleted = false LIMIT 1) AS MainPhotoUrl
         FROM bookings b
         INNER JOIN users u ON b.user_id = u.id

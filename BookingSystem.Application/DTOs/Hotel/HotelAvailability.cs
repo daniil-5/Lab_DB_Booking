@@ -12,7 +12,6 @@ public class HotelAvailability
     public int Capacity { get; set; }
     public decimal Price { get; set; }
     public decimal Area { get; set; }
-    public string Amenities { get; set; }
     public int PhotoCount { get; set; }
     public int BookedCount { get; set; }
 }
