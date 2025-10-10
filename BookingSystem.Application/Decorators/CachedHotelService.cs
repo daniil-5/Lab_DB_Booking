@@ -202,7 +202,6 @@ namespace BookingSystem.Application.Decorators
                 $"minprice:{searchDto.MinPrice?.ToString() ?? "null"}",
                 $"maxprice:{searchDto.MaxPrice?.ToString() ?? "null"}",
                 $"roomtype:{searchDto.RoomTypeId?.ToString() ?? "null"}",
-                $"amenities:{(searchDto.Amenities != null ? string.Join(",", searchDto.Amenities.OrderBy(a => a)) : "null")}",
                 $"sort:{searchDto.SortBy ?? "rating"}",
                 $"desc:{searchDto.SortDescending}",
                 $"page:{searchDto.PageNumber}",

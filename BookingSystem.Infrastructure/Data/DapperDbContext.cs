@@ -6,12 +6,12 @@ namespace BookingSystem.Infrastructure.Data;
 
 public class DapperDbContext
 {
-    private readonly string _connectionString;
+    private readonly NpgsqlDataSource _dataSource;
 
-    public DapperDbContext(string connectionString)
+    public DapperDbContext(NpgsqlDataSource dataSource)
     {
-        _connectionString = connectionString;
+        _dataSource = dataSource;
     }
 
-    public IDbConnection CreateConnection() => new NpgsqlConnection(_connectionString);
+    public IDbConnection CreateConnection() => _dataSource.CreateConnection();
 }

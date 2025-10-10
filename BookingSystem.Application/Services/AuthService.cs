@@ -10,11 +10,13 @@ public class AuthService : IAuthService
 {
     private readonly IJwtService _jwtService;
     private readonly IUserService _userService;
+    private readonly IUserActionAuditService _auditService;
 
-    public AuthService(IJwtService jwtService, IUserService userService)
+    public AuthService(IJwtService jwtService, IUserService userService, IUserActionAuditService auditService)
     {
         _jwtService = jwtService;
         _userService = userService;
+        _auditService = auditService;
     }
 
         public async Task<AuthResponse> Register(RegisterUserDto registerDto)
@@ -68,6 +70,8 @@ public class AuthService : IAuthService
         var userDto = await _userService.GetUserByEmailAsync(loginDto.Email);
         if (userDto == null) // This shouldn't happen if password verification succeeded
             throw new Exception("Invalid credentials");
+
+        await _auditService.AuditActionAsync(userDto.Id, UserActionType.UserLogin, true);
         
         // Create JWT token
         var userForToken = new User
@@ -92,5 +96,10 @@ public class AuthService : IAuthService
     public async Task<UserDto> GetUserById(int userId)
     {
         return await _userService.GetUserByIdAsync(userId);
+    }
+
+    public async Task Logout(int userId)
+    {
+        await _auditService.AuditActionAsync(userId, UserActionType.UserLogout, true);
     }
 }

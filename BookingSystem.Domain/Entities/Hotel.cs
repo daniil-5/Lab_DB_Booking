@@ -6,11 +6,11 @@ namespace BookingSystem.Domain.Entities;
 public class Hotel : BaseEntity
 {
     [Column("name")]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     [Column("description")]
-    public string Description { get; set; }
+    public string Description { get; set; } = null!;
     [Column("location")]
-    public string Location { get; set; }
+    public string Location { get; set; } = null!;
     [Column("rating")]
     public decimal Rating { get; set; }
     [Column("base_price")]

@@ -7,11 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\BookingSystem.Application\BookingSystem.Application.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Data\bin\Debug\net8.0\" />
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <ProjectReference Include="..\BookingSystem.Application\BookingSystem.Application.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -21,12 +18,6 @@
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
       <PackageReference Include="Npgsql" Version="9.0.4" />
       <PackageReference Include="StackExchange.Redis" Version="2.8.58" />
-    </ItemGroup>
-
-    
-
-    <ItemGroup>
-      <Compile Remove="Factories\NpgsqlConnectionFactory.cs" />
     </ItemGroup>
 
 </Project>

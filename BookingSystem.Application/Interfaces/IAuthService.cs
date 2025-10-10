@@ -8,5 +8,6 @@ public interface IAuthService
 {
     Task<AuthResponse> Register(RegisterUserDto registerDto);
     Task<AuthResponse> Login(LoginDto loginDto);
+    Task Logout(int userId);
     Task<UserDto> GetUserById(int userId);
 }

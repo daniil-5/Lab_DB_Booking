@@ -24,6 +24,5 @@ public class BookingDetails
     public int RoomCapacity { get; set; }
     public decimal RoomArea { get; set; }
     public decimal RoomBasePrice { get; set; }
-    public string RoomAmenities { get; set; }
     public string MainPhotoUrl { get; set; }
 }

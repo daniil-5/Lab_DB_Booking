@@ -1,6 +1,8 @@
 using BookingSystem.Application.DTOs.RoomType;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Interfaces;
+using BookingSystem.Domain.Enums;
+using Microsoft.AspNetCore.Http;
 
 namespace BookingSystem.Application.Services;
 
@@ -8,13 +10,19 @@ public class RoomTypeService : IRoomTypeService
     {
         private readonly IRepository<Domain.Entities.RoomType> _roomTypeRepository;
         private readonly IHotelRepository _hotelRepository;
+        private readonly IUserActionAuditService _auditService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public RoomTypeService(
             IRepository<Domain.Entities.RoomType> roomTypeRepository,
-            IHotelRepository hotelRepository)
+            IHotelRepository hotelRepository,
+            IUserActionAuditService auditService,
+            IHttpContextAccessor httpContextAccessor)
         {
             _roomTypeRepository = roomTypeRepository;
             _hotelRepository = hotelRepository;
+            _auditService = auditService;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<RoomTypeDto> CreateRoomTypeAsync(CreateRoomTypeDto roomTypeDto)
@@ -38,6 +46,10 @@ public class RoomTypeService : IRoomTypeService
             };
 
             await _roomTypeRepository.AddAsync(roomType);
+
+            var userId = GetCurrentUserId();
+            await _auditService.AuditActionAsync(userId, UserActionType.RoomTypesCreated, true);
+
             return MapToDto(roomType);
         }
 
@@ -64,6 +76,10 @@ public class RoomTypeService : IRoomTypeService
             existingRoomType.HotelId = roomTypeDto.HotelId;
 
             await _roomTypeRepository.UpdateAsync(existingRoomType);
+
+            var userId = GetCurrentUserId();
+            await _auditService.AuditActionAsync(userId, UserActionType.RoomTypesUpdated, true);
+
             return MapToDto(existingRoomType);
         }
 
@@ -77,6 +93,9 @@ public class RoomTypeService : IRoomTypeService
             
             
             await _roomTypeRepository.DeleteAsync(id);
+
+            var userId = GetCurrentUserId();
+            await _auditService.AuditActionAsync(userId, UserActionType.RoomTypesDeleted, true);
         }
 
         public async Task<RoomTypeDto> GetRoomTypeByIdAsync(int id)
@@ -125,5 +144,15 @@ public class RoomTypeService : IRoomTypeService
                 Floor = roomType.Floor,
                 HotelId = roomType.HotelId
             };
+        }
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = _httpContextAccessor.HttpContext?.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
+            {
+                return userId;
+            }
+            throw new InvalidOperationException("User ID not found in token");
         }
     }

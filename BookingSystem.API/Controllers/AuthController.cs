@@ -55,8 +55,14 @@ public class AuthController : ControllerBase
     }
     
     [HttpPost("logout")]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout()
     {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userId))
+        {
+            await _authService.Logout(int.Parse(userId));
+        }
+
         Response.Cookies.Delete("X-Access-Token", new CookieOptions
         {
             HttpOnly = true,

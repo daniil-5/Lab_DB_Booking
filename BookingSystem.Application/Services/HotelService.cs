@@ -5,16 +5,22 @@ using BookingSystem.Application.DTOs.HotelPhoto;
 using BookingSystem.Application.Hotel;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Interfaces;
+using BookingSystem.Domain.Enums;
+using Microsoft.AspNetCore.Http;
 
 namespace BookingSystem.Application.Services;
 
 public class HotelService : IHotelService
 {
     private readonly IHotelRepository _hotelRepository;
+    private readonly IUserActionAuditService _auditService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public HotelService(IHotelRepository hotelRepository)
+    public HotelService(IHotelRepository hotelRepository, IUserActionAuditService auditService, IHttpContextAccessor httpContextAccessor)
     {
         _hotelRepository = hotelRepository;
+        _auditService = auditService;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<HotelDto> CreateHotelAsync(CreateHotelDto hotelDto)
@@ -30,6 +36,10 @@ public class HotelService : IHotelService
         };
 
         await _hotelRepository.AddAsync(hotel);
+
+        var userId = GetCurrentUserId();
+        await _auditService.AuditActionAsync(userId, UserActionType.HotelCreated, true);
+
         return MapToDto(hotel);
     }
 
@@ -50,6 +60,10 @@ public class HotelService : IHotelService
         existingHotel.UpdatedAt = DateTime.UtcNow;
 
         await _hotelRepository.UpdateAsync(existingHotel);
+
+        var userId = GetCurrentUserId();
+        await _auditService.AuditActionAsync(userId, UserActionType.HotelUpdated, true);
+
         return MapToDto(existingHotel);
     }
 
@@ -62,6 +76,9 @@ public class HotelService : IHotelService
         }
 
         await _hotelRepository.DeleteAsync(id);
+
+        var userId = GetCurrentUserId();
+        await _auditService.AuditActionAsync(userId, UserActionType.HotelDeleted, true);
     }
 
     public async Task<HotelDto> GetHotelByIdAsync(int id)
@@ -137,6 +154,16 @@ public class HotelService : IHotelService
                 })
                 .ToList() ?? new List<HotelPhotoDto>()
         };
+    }
+
+    private int GetCurrentUserId()
+    {
+        var userIdClaim = _httpContextAccessor.HttpContext?.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
+        {
+            return userId;
+        }
+        throw new InvalidOperationException("User ID not found in token");
     }
     // public async Task<IEnumerable<HotelStatistics>> GetHotelsStatisticsAsync()
     // {

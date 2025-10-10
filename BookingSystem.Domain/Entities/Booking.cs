@@ -7,11 +7,11 @@ public class Booking : BaseEntity
 {
     [Column("room_type_id")]
     public int RoomTypeId { get; set; }
-    public RoomType RoomType { get; set; }
+    public RoomType RoomType { get; set; } = null!;
     [Column("user_id")]
     public int UserId { get; set; }
-    public User User { get; set; }
-    public Hotel Hotel  { get; set; }
+    public User User { get; set; } = null!;
+    public Hotel Hotel  { get; set; } = null!;
     [Column("hotel_id")]
     public int HotelId { get; set; }
     [Column("check_in_date")]

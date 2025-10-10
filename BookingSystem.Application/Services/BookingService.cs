@@ -13,17 +13,20 @@ namespace BookingSystem.Application.Services
         private readonly IRepository<Domain.Entities.RoomType> _roomTypeRepository;
         private readonly IHotelRepository _hotelRepository;
         private readonly IRepository<RoomPricing> _pricingRepository;
+        private readonly IUserActionAuditService _auditService;
 
         public BookingService(
             IRepository<Domain.Entities.Booking> bookingRepository,
             IRepository<Domain.Entities.RoomType> roomTypeRepository,
             IHotelRepository hotelRepository,
-            IRepository<RoomPricing> pricingRepository)
+            IRepository<RoomPricing> pricingRepository,
+            IUserActionAuditService auditService)
         {
             _bookingRepository = bookingRepository;
             _roomTypeRepository = roomTypeRepository;
             _hotelRepository = hotelRepository;
             _pricingRepository = pricingRepository;
+            _auditService = auditService;
         }
 
         public async Task<BookingResponseDto> GetBookingByIdAsync(int id)
@@ -98,6 +101,7 @@ namespace BookingSystem.Application.Services
             };
 
             await _bookingRepository.AddAsync(booking);
+            await _auditService.AuditActionAsync(booking.UserId, UserActionType.BookingCreated, true);
             
             return MapToDto(booking);
         }
@@ -155,9 +159,8 @@ namespace BookingSystem.Application.Services
             booking.CheckOutDate = dto.CheckOutDate;
             booking.GuestCount = dto.GuestCount;
             booking.Status = dto.Status;
-            booking.UpdatedAt = DateTime.UtcNow;
-
             await _bookingRepository.UpdateAsync(booking);
+            await _auditService.AuditActionAsync(booking.UserId, UserActionType.BookingUpdated, true);
             
             return MapToDto(booking);
         }
@@ -171,6 +174,7 @@ namespace BookingSystem.Application.Services
             }
 
             await _bookingRepository.DeleteAsync(id);
+            await _auditService.AuditActionAsync(booking.UserId, UserActionType.BookingDeleted, true);
         }
 
         // public async Task<IEnumerable<BookingResponseDto>> GetBookingsByUserIdAsync(int userId)

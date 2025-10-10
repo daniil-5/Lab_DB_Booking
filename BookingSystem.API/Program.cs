@@ -8,6 +8,7 @@ using BookingSystem.Application.Services;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Interfaces;
 using BookingSystem.Domain.Other;
+using Dapper;
 
 using BookingSystem.Infrastructure.Repositories;
 using BookingSystem.Infrastructure.Services;
@@ -15,7 +16,9 @@ using BookingSystem.Infrastructure.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using Npgsql;
 using Serilog;
+using BookingSystem.Domain.Enums;
 using Serilog.Events;
 using StackExchange.Redis;
 
@@ -92,7 +95,13 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Configure Dapper
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
-builder.Services.AddSingleton(new DapperDbContext(builder.Configuration.GetConnectionString("DefaultConnection")));
+var dataSourceBuilder = new NpgsqlDataSourceBuilder(builder.Configuration.GetConnectionString("DefaultConnection"));
+dataSourceBuilder.MapEnum<BookingStatus>("booking_status");
+dataSourceBuilder.MapEnum<UserRole>("user_role");
+var dataSource = dataSourceBuilder.Build();
+builder.Services.AddSingleton(dataSource);
+
+builder.Services.AddSingleton(new DapperDbContext(dataSource));
 
 #endregion
 
@@ -124,6 +133,7 @@ builder.Services.AddScoped<IRepository<RoomType>, RoomTypeRepository>();
 builder.Services.AddScoped<IRepository<RoomPricing>, RoomPricingRepository>();
 builder.Services.AddScoped<IRepository<HotelPhoto>, HotelPhotoRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserActionAuditRepository, UserActionAuditRepository>();
 
 #endregion
 
@@ -160,6 +170,7 @@ builder.Services.AddScoped<IUserService>(provider =>
 
 builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();
 builder.Services.AddScoped<IRoomPricingService, RoomPricingService>();
+builder.Services.AddScoped<IUserActionAuditService, UserActionAuditService>();
 
 
 #endregion

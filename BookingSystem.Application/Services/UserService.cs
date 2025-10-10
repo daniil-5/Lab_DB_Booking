@@ -11,10 +11,12 @@ namespace BookingSystem.Application.Services
     public class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IUserActionAuditService _auditService;
 
-        public UserService(IUserRepository userRepository)
+        public UserService(IUserRepository userRepository, IUserActionAuditService auditService)
         {
             _userRepository = userRepository;
+            _auditService = auditService;
         }
 
         public async Task<UserDto> CreateUserAsync(CreateUserDto userDto)
@@ -40,6 +42,7 @@ namespace BookingSystem.Application.Services
             };
 
             await _userRepository.AddAsync(user);
+            await _auditService.AuditActionAsync(user.Id, UserActionType.UserCreated, true);
             return MapToDto(user);
         }
 
@@ -73,6 +76,7 @@ namespace BookingSystem.Application.Services
             existingUser.UpdatedAt = DateTime.UtcNow;
 
             await _userRepository.UpdateAsync(existingUser);
+            await _auditService.AuditActionAsync(existingUser.Id, UserActionType.UserUpdated, true);
             return MapToDto(existingUser);
         }
 
@@ -83,6 +87,7 @@ namespace BookingSystem.Application.Services
                 throw new ApplicationException($"User with ID {id} not found");
 
             await _userRepository.DeleteAsync(id);
+            await _auditService.AuditActionAsync(id, UserActionType.UserDeleted, true);
         }
 
         public async Task<UserDto> GetUserByIdAsync(int id)
@@ -126,6 +131,7 @@ namespace BookingSystem.Application.Services
             user.UpdatedAt = DateTime.UtcNow;
 
             await _userRepository.UpdateAsync(user);
+            await _auditService.AuditActionAsync(user.Id, UserActionType.ChangePassword, true);
             return true;
         }
         
