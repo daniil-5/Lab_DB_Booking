@@ -1,3 +1,4 @@
+using BookingSystem.Application.DTOs.Booking;
 using BookingSystem.Application.Dtos.Hotel;
 using BookingSystem.Application.DTOs.Hotel;
 using BookingSystem.Application.Hotel;
@@ -11,6 +12,10 @@ public interface IHotelService
     Task DeleteHotelAsync(int id);
     Task<HotelDto> GetHotelByIdAsync(int id);
     Task<IEnumerable<HotelDto>> GetAllHotelsAsync();
-    
     Task<HotelSearchResultDto> SearchHotelsAsync(HotelSearchDto searchDto);
+    // Task<IEnumerable<HotelStatistics>> GetHotelsStatisticsAsync();
+    // Task<IEnumerable<HotelAvailability>> SearchAvailableHotelsAsync(string location, DateTime checkIn, DateTime checkOut, int guestCount);
+    // Task<IEnumerable<HotelRanking>> GetHotelsRankedByLocationAsync();
+    // Task<HotelPerformanceReport> GetHotelPerformanceReportAsync(int hotelId);
+    // Task<IEnumerable<MonthlyBookingTrend>> GetMonthlyBookingTrendsAsync(int? hotelId = null, int months = 12);
 }

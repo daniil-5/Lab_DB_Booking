@@ -1,4 +1,9 @@
 // HotelRepository.cs
+
+using BookingSystem.Application.DTOs.Booking;
+using BookingSystem.Application.DTOs.Hotel;
+using BookingSystem.Application.DTOs.RoomType;
+using BookingSystem.Application.DTOs.User;
 using Dapper;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Interfaces;
@@ -135,4 +140,353 @@ public class HotelRepository : IHotelRepository
     {
         return Task.FromResult<IEnumerable<Hotel>>(Array.Empty<Hotel>());
     }
+    
+    public async Task<IEnumerable<HotelStatistics>> GetHotelsWithStatisticsAsync()
+{
+    using var conn = _context.CreateConnection();
+    
+    var sql = @"
+        SELECT 
+            h.id AS HotelId,
+            h.name AS HotelName,
+            h.location AS Location,
+            h.rating AS Rating,
+            h.base_price AS BasePrice,
+            COUNT(DISTINCT b.id) AS TotalBookings,
+            COUNT(DISTINCT CASE WHEN b.status = 1 THEN b.id END) AS ConfirmedBookings,
+            COUNT(DISTINCT CASE WHEN b.status = 2 THEN b.id END) AS CancelledBookings,
+            COALESCE(SUM(b.total_price), 0) AS TotalRevenue,
+            COALESCE(AVG(b.total_price), 0) AS AverageBookingPrice,
+            COUNT(DISTINCT rt.id) AS TotalRoomTypes,
+            COUNT(DISTINCT hp.id) AS TotalPhotos
+        FROM hotels h
+        LEFT JOIN room_types rt ON h.id = rt.hotel_id AND rt.is_deleted = false
+        LEFT JOIN bookings b ON h.id = b.hotel_id AND b.is_deleted = false
+        LEFT JOIN hotel_photos hp ON h.id = hp.hotel_id AND hp.is_deleted = false
+        WHERE h.is_deleted = false
+        GROUP BY h.id, h.name, h.location, h.rating, h.base_price
+        ORDER BY TotalRevenue DESC";
+    
+    return await conn.QueryAsync<HotelStatistics>(sql);
+}
+
+/// <summary>
+/// Search hotels by location with availability check for specific dates
+/// Demonstrates: Complex JOIN, subquery, date filtering
+/// </summary>
+public async Task<IEnumerable<HotelAvailability>> SearchAvailableHotelsAsync(
+    string location, 
+    DateTime checkIn, 
+    DateTime checkOut, 
+    int guestCount)
+{
+    using var conn = _context.CreateConnection();
+    
+    var sql = @"
+        SELECT 
+            h.id AS HotelId,
+            h.name AS HotelName,
+            h.location AS Location,
+            h.rating AS Rating,
+            h.description AS Description,
+            rt.id AS RoomTypeId,
+            rt.name AS RoomTypeName,
+            rt.capacity AS Capacity,
+            rt.base_price AS Price,
+            rt.area AS Area,
+            rt.amenities AS Amenities,
+            COUNT(DISTINCT hp.id) AS PhotoCount,
+            (
+                SELECT COUNT(*)
+                FROM bookings b2
+                WHERE b2.room_type_id = rt.id
+                AND b2.is_deleted = false
+                AND b2.status IN (0, 1)
+                AND (
+                    (b2.check_in_date <= @checkIn AND b2.check_out_date >= @checkIn)
+                    OR (b2.check_in_date <= @checkOut AND b2.check_out_date >= @checkOut)
+                    OR (b2.check_in_date >= @checkIn AND b2.check_out_date <= @checkOut)
+                )
+            ) AS BookedCount
+        FROM hotels h
+        INNER JOIN room_types rt ON h.id = rt.hotel_id AND rt.is_deleted = false
+        LEFT JOIN hotel_photos hp ON h.id = hp.hotel_id AND hp.is_deleted = false
+        WHERE h.is_deleted = false
+        AND h.location ILIKE @location
+        AND rt.capacity >= @guestCount
+        GROUP BY h.id, h.name, h.location, h.rating, h.description, 
+                 rt.id, rt.name, rt.capacity, rt.base_price, rt.area, rt.amenities
+        HAVING COUNT(DISTINCT hp.id) > 0  -- only hotels with photos
+        ORDER BY h.rating DESC, rt.base_price ASC";
+    
+    return await conn.QueryAsync<HotelAvailability>(sql, new 
+    { 
+        location = $"%{location}%", 
+        checkIn, 
+        checkOut, 
+        guestCount 
+    });
+}
+
+/// <summary>
+/// Get hotels ranked by popularity in each location
+/// Demonstrates: Window functions, CTEs, ranking
+/// </summary>
+public async Task<IEnumerable<HotelRanking>> GetHotelsRankedByLocationAsync()
+{
+    using var conn = _context.CreateConnection();
+    
+    var sql = @"
+        WITH hotel_booking_stats AS (
+            SELECT 
+                h.id,
+                h.name,
+                h.location,
+                h.rating,
+                h.base_price,
+                COUNT(b.id) AS booking_count,
+                SUM(b.total_price) AS total_revenue
+            FROM hotels h
+            LEFT JOIN bookings b ON h.id = b.hotel_id AND b.is_deleted = false
+            WHERE h.is_deleted = false
+            GROUP BY h.id, h.name, h.location, h.rating, h.base_price
+        )
+        SELECT 
+            id AS HotelId,
+            name AS HotelName,
+            location AS Location,
+            rating AS Rating,
+            base_price AS BasePrice,
+            booking_count AS BookingCount,
+            total_revenue AS TotalRevenue,
+            RANK() OVER (PARTITION BY location ORDER BY booking_count DESC) AS RankInLocation,
+            RANK() OVER (ORDER BY total_revenue DESC) AS OverallRevenueRank,
+            ROUND(
+                (booking_count::numeric / NULLIF(SUM(booking_count) OVER (PARTITION BY location), 0)) * 100, 
+                2
+            ) AS MarketShareInLocation
+        FROM hotel_booking_stats
+        ORDER BY location, RankInLocation";
+    
+    return await conn.QueryAsync<HotelRanking>(sql);
+}
+
+/// <summary>
+/// Get detailed hotel performance report with room type breakdown
+/// Demonstrates: Multiple joins, nested aggregations, CASE statements
+/// </summary>
+public async Task<HotelPerformanceReport> GetHotelPerformanceReportAsync(int hotelId)
+{
+    using var conn = _context.CreateConnection();
+    
+    // Main hotel info with overall statistics
+    var hotelSql = @"
+        SELECT 
+            h.id AS HotelId,
+            h.name AS HotelName,
+            h.location AS Location,
+            h.rating AS Rating,
+            h.base_price AS BasePrice,
+            COUNT(DISTINCT b.id) AS TotalBookings,
+            COALESCE(SUM(b.total_price), 0) AS TotalRevenue,
+            COALESCE(AVG(b.total_price), 0) AS AverageBookingValue,
+            COUNT(DISTINCT b.user_id) AS UniqueCustomers,
+            COUNT(DISTINCT rt.id) AS TotalRoomTypes
+        FROM hotels h
+        LEFT JOIN room_types rt ON h.id = rt.hotel_id AND rt.is_deleted = false
+        LEFT JOIN bookings b ON h.id = b.hotel_id AND b.is_deleted = false
+        WHERE h.id = @hotelId AND h.is_deleted = false
+        GROUP BY h.id, h.name, h.location, h.rating, h.base_price";
+    
+    var hotel = await conn.QuerySingleOrDefaultAsync<HotelPerformanceReport>(hotelSql, new { hotelId });
+    
+    if (hotel == null) return null;
+    
+    // Room type performance breakdown
+    var roomTypesSql = @"
+        SELECT 
+            rt.id AS RoomTypeId,
+            rt.name AS RoomTypeName,
+            rt.capacity AS Capacity,
+            rt.base_price AS BasePrice,
+            COUNT(b.id) AS BookingCount,
+            COALESCE(SUM(b.total_price), 0) AS Revenue,
+            COALESCE(AVG(b.total_price), 0) AS AveragePrice,
+            COUNT(CASE WHEN b.status = 1 THEN 1 END) AS ConfirmedCount,
+            COUNT(CASE WHEN b.status = 2 THEN 1 END) AS CancelledCount,
+            ROUND(
+                (COUNT(CASE WHEN b.status = 2 THEN 1 END)::numeric / 
+                 NULLIF(COUNT(b.id), 0)) * 100, 
+                2
+            ) AS CancellationRate
+        FROM room_types rt
+        LEFT JOIN bookings b ON rt.id = b.room_type_id AND b.is_deleted = false
+        WHERE rt.hotel_id = @hotelId AND rt.is_deleted = false
+        GROUP BY rt.id, rt.name, rt.capacity, rt.base_price
+        ORDER BY Revenue DESC";
+    
+    hotel.RoomTypePerformance = (await conn.QueryAsync<RoomTypePerformance>(roomTypesSql, new { hotelId })).ToList();
+    
+    return hotel;
+}
+
+/// <summary>
+/// Get monthly booking trends for hotels
+/// Demonstrates: Date grouping, time series analysis
+/// </summary>
+public async Task<IEnumerable<MonthlyBookingTrend>> GetMonthlyBookingTrendsAsync(int? hotelId = null, int months = 12)
+{
+    using var conn = _context.CreateConnection();
+    
+    var sql = @"
+        SELECT 
+            h.id AS HotelId,
+            h.name AS HotelName,
+            DATE_TRUNC('month', b.created_at) AS Month,
+            COUNT(b.id) AS BookingCount,
+            SUM(b.total_price) AS Revenue,
+            AVG(b.total_price) AS AverageBookingValue,
+            COUNT(DISTINCT b.user_id) AS UniqueCustomers,
+            SUM(b.guest_count) AS TotalGuests
+        FROM hotels h
+        INNER JOIN bookings b ON h.id = b.hotel_id
+        WHERE h.is_deleted = false 
+        AND b.is_deleted = false
+        AND b.created_at >= CURRENT_TIMESTAMP - INTERVAL '@months months'
+        AND (@hotelId IS NULL OR h.id = @hotelId)
+        GROUP BY h.id, h.name, DATE_TRUNC('month', b.created_at)
+        ORDER BY h.id, Month DESC";
+    
+    return await conn.QueryAsync<MonthlyBookingTrend>(sql, new { hotelId, months });
+}
+
+
+// ============================================================================
+// BookingRepository.cs - Advanced Methods
+// ============================================================================
+
+// Add these methods to BookingRepository class
+
+/// <summary>
+/// Get booking details with full user, hotel, and room information
+/// Demonstrates: Multiple JOINs, data enrichment
+/// </summary>
+public async Task<IEnumerable<BookingDetails>> GetBookingsWithDetailsAsync(
+    int? userId = null, 
+    int? hotelId = null, 
+    int? status = null)
+{
+    using var conn = _context.CreateConnection();
+    
+    var sql = @"
+        SELECT 
+            b.id AS BookingId,
+            b.check_in_date AS CheckInDate,
+            b.check_out_date AS CheckOutDate,
+            b.guest_count AS GuestCount,
+            b.status AS Status,
+            b.total_price AS TotalPrice,
+            b.created_at AS CreatedAt,
+            EXTRACT(DAY FROM (b.check_out_date - b.check_in_date)) AS NightCount,
+            u.id AS UserId,
+            u.username AS Username,
+            u.email AS UserEmail,
+            u.first_name || ' ' || u.last_name AS FullName,
+            u.phone_number AS PhoneNumber,
+            h.id AS HotelId,
+            h.name AS HotelName,
+            h.location AS HotelLocation,
+            h.rating AS HotelRating,
+            rt.id AS RoomTypeId,
+            rt.name AS RoomTypeName,
+            rt.capacity AS RoomCapacity,
+            rt.area AS RoomArea,
+            rt.base_price AS RoomBasePrice,
+            rt.amenities AS RoomAmenities,
+            (SELECT url FROM hotel_photos WHERE hotel_id = h.id AND is_main = true AND is_deleted = false LIMIT 1) AS MainPhotoUrl
+        FROM bookings b
+        INNER JOIN users u ON b.user_id = u.id
+        INNER JOIN hotels h ON b.hotel_id = h.id
+        INNER JOIN room_types rt ON b.room_type_id = rt.id
+        WHERE b.is_deleted = false
+        AND u.is_deleted = false
+        AND h.is_deleted = false
+        AND rt.is_deleted = false
+        AND (@userId IS NULL OR b.user_id = @userId)
+        AND (@hotelId IS NULL OR b.hotel_id = @hotelId)
+        AND (@status IS NULL OR b.status = @status)
+        ORDER BY b.created_at DESC";
+    
+    return await conn.QueryAsync<BookingDetails>(sql, new { userId, hotelId, status });
+}
+
+/// <summary>
+/// Get user booking history with aggregated statistics
+/// Demonstrates: Aggregation, user behavior analysis
+/// </summary>
+public async Task<UserBookingHistory> GetUserBookingHistoryAsync(int userId)
+{
+    using var conn = _context.CreateConnection();
+    
+    // User statistics
+    var statsSql = @"
+        SELECT 
+            u.id AS UserId,
+            u.username AS Username,
+            u.email AS Email,
+            u.first_name || ' ' || u.last_name AS FullName,
+            COUNT(b.id) AS TotalBookings,
+            COUNT(CASE WHEN b.status = 1 THEN 1 END) AS CompletedBookings,
+            COUNT(CASE WHEN b.status = 2 THEN 1 END) AS CancelledBookings,
+            COALESCE(SUM(b.total_price), 0) AS TotalSpent,
+            COALESCE(AVG(b.total_price), 0) AS AverageBookingValue,
+            MIN(b.created_at) AS FirstBookingDate,
+            MAX(b.created_at) AS LastBookingDate,
+            COUNT(DISTINCT b.hotel_id) AS UniqueHotelsVisited
+        FROM users u
+        LEFT JOIN bookings b ON u.id = b.user_id AND b.is_deleted = false
+        WHERE u.id = @userId AND u.is_deleted = false
+        GROUP BY u.id, u.username, u.email, u.first_name, u.last_name";
+    
+    var history = await conn.QuerySingleOrDefaultAsync<UserBookingHistory>(statsSql, new { userId });
+    
+    if (history == null) return null;
+    
+    // Recent bookings
+    var bookingsSql = @"
+        SELECT 
+            b.id AS BookingId,
+            b.check_in_date AS CheckInDate,
+            b.check_out_date AS CheckOutDate,
+            b.status AS Status,
+            b.total_price AS TotalPrice,
+            h.name AS HotelName,
+            h.location AS Location,
+            rt.name AS RoomTypeName
+        FROM bookings b
+        INNER JOIN hotels h ON b.hotel_id = h.id
+        INNER JOIN room_types rt ON b.room_type_id = rt.id
+        WHERE b.user_id = @userId AND b.is_deleted = false
+        ORDER BY b.created_at DESC
+        LIMIT 10";
+    
+    history.RecentBookings = (await conn.QueryAsync<UserRecentBooking>(bookingsSql, new { userId })).ToList();
+    
+    // Favorite locations
+    var locationsSql = @"
+        SELECT 
+            h.location AS Location,
+            COUNT(b.id) AS BookingCount,
+            SUM(b.total_price) AS TotalSpent
+        FROM bookings b
+        INNER JOIN hotels h ON b.hotel_id = h.id
+        WHERE b.user_id = @userId AND b.is_deleted = false
+        GROUP BY h.location
+        ORDER BY BookingCount DESC
+        LIMIT 5";
+    
+    history.FavoriteLocations = (await conn.QueryAsync<LocationStatistic>(locationsSql, new { userId })).ToList();
+    
+    return history;
+}
 }

@@ -27,5 +27,6 @@ namespace BookingSystem.Domain.Interfaces
             int guests, 
             int pageNumber = 1, 
             int pageSize = 10);
+        
     }
 }

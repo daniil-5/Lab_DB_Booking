@@ -26,7 +26,6 @@ public class HotelService : IHotelService
             Location = hotelDto.Location,
             Rating = hotelDto.Rating,
             BasePrice = hotelDto.BasePrice,
-
             CreatedAt = DateTime.UtcNow
         };
 
@@ -139,4 +138,91 @@ public class HotelService : IHotelService
                 .ToList() ?? new List<HotelPhotoDto>()
         };
     }
+    // public async Task<IEnumerable<HotelStatistics>> GetHotelsStatisticsAsync()
+    // {
+    //     return await _hotelRepository.GetHotelsWithStatisticsAsync();
+    // }
+    // public async Task<IEnumerable<HotelAvailability>> SearchAvailableHotelsAsync(
+    //     string location, 
+    //     DateTime checkIn, 
+    //     DateTime checkOut, 
+    //     int guestCount)
+    // {
+    //     if (checkOut <= checkIn)
+    //     {
+    //         throw new ArgumentException("Check-out date must be after check-in date");
+    //     }
+    //
+    //     if (guestCount <= 0)
+    //     {
+    //         throw new ArgumentException("Guest count must be greater than zero");
+    //     }
+    //
+    //     return await _hotelRepository.SearchAvailableHotelsAsync(
+    //         location, checkIn, checkOut, guestCount);
+    // }
+    // public async Task<IEnumerable<HotelRanking>> GetHotelsRankedByLocationAsync()
+    // {
+    //     return await _hotelRepository.GetHotelsRankedByLocationAsync();
+    // }
+    //
+    // /// <summary>
+    // /// Get detailed performance report for a specific hotel
+    // /// </summary>
+    // public async Task<HotelPerformanceReport> GetHotelPerformanceReportAsync(int hotelId)
+    // {
+    //     var report = await _hotelRepository.GetHotelPerformanceReportAsync(hotelId);
+    //     
+    //     if (report == null)
+    //     {
+    //         throw new KeyNotFoundException($"Hotel with ID {hotelId} not found");
+    //     }
+    //
+    //     return report;
+    // }
+    //
+    // /// <summary>
+    // /// Get monthly booking trends for hotels
+    // /// </summary>
+    // public async Task<IEnumerable<MonthlyBookingTrend>> GetMonthlyBookingTrendsAsync(
+    //     int? hotelId = null, 
+    //     int months = 12)
+    // {
+    //     if (months <= 0 || months > 24)
+    //     {
+    //         throw new ArgumentException("Months must be between 1 and 24");
+    //     }
+    //
+    //     return await _hotelRepository.GetMonthlyBookingTrendsAsync(hotelId, months);
+    // }
+    //
+    // private static HotelDto MapToDto(Domain.Entities.Hotel hotel)
+    // {
+    //     return new HotelDto
+    //     {
+    //         Id = hotel.Id,
+    //         Name = hotel.Name,
+    //         Description = hotel.Description,
+    //         Location = hotel.Location,
+    //         Rating = hotel.Rating,
+    //         BasePrice = hotel.BasePrice,
+    //         CreatedAt = hotel.CreatedAt,
+    //         UpdatedAt = hotel.UpdatedAt,
+    //         RoomTypes = hotel.RoomTypes?
+    //             .Where(rt => !rt.IsDeleted)
+    //             .ToList() ?? new List<Domain.Entities.RoomType>(),
+    //         Photos = hotel.Photos?
+    //             .Where(p => !p.IsDeleted)
+    //             .Select(p => new HotelPhotoDto
+    //             {
+    //                 Id = p.Id,
+    //                 HotelId = p.HotelId,
+    //                 Url = p.Url,
+    //                 Description = p.Description,
+    //                 IsMain = p.IsMain,
+    //                 CreatedAt = p.CreatedAt
+    //             })
+    //             .ToList() ?? new List<HotelPhotoDto>()
+    //     };
+    // }
 }
