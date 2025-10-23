@@ -7,7 +7,7 @@ public class UserRecentBooking
     public DateTime CheckOutDate { get; set; }
     public int Status { get; set; }
     public decimal TotalPrice { get; set; }
-    public string HotelName { get; set; }
-    public string Location { get; set; }
-    public string RoomTypeName { get; set; }
+    public string HotelName { get; set; } = string.Empty;
+    public string Location { get; set; } = string.Empty;
+    public string RoomTypeName { get; set; } = string.Empty;
 }

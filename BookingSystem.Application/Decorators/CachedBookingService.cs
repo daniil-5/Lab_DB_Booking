@@ -2,6 +2,8 @@ using BookingSystem.Application.DTOs.Booking;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using BookingSystem.Domain.DTOs.Booking;
+using BookingSystem.Domain.DTOs.User;
 
 namespace BookingSystem.Application.Decorators;
 public class CachedBookingService : IBookingService
@@ -20,6 +22,9 @@ public class CachedBookingService : IBookingService
     private const string ROOM_AVAILABILITY_KEY = "availability:roomtype:{0}:hotel:{1}:{2}:{3}";
     private const string BOOKING_PREFIX = "booking";
     private const string BOOKINGS_PREFIX = "bookings";
+    private const string BOOKING_DETAILS_KEY = "booking_details:user:{0}:hotel:{1}:status:{2}";
+    private const string USER_BOOKING_HISTORY_KEY = "user_booking_history:{0}";
+
 
     // Cache expiration times - booking data is more dynamic
     private static readonly TimeSpan BookingCacheExpiration = TimeSpan.FromMinutes(10);
@@ -334,6 +339,52 @@ public class CachedBookingService : IBookingService
         
         _logger.LogInformation("Booking status updated and cache refreshed for ID: {BookingId}", id);
         return updatedBooking;
+    }
+    
+    public async Task<IEnumerable<BookingDetails>> GetBookingsWithDetailsAsync(int? userId = null, int? hotelId = null, int? status = null)
+    {
+        var cacheKey = string.Format(BOOKING_DETAILS_KEY, userId ?? 0, hotelId ?? 0, status ?? 0);
+
+        var cachedDetails = await _cacheService.GetAsync<IEnumerable<BookingDetails>>(cacheKey);
+        if (cachedDetails != null)
+        {
+            _logger.LogDebug("Booking details found in cache for key: {CacheKey}", cacheKey);
+            return cachedDetails;
+        }
+
+        _logger.LogDebug("Booking details not in cache, fetching from service for key: {CacheKey}", cacheKey);
+        var details = await _bookingService.GetBookingsWithDetailsAsync(userId, hotelId, status);
+
+        if (details.Any())
+        {
+            await _cacheService.SetAsync(cacheKey, details, ListCacheExpiration);
+            _logger.LogDebug("Booking details cached for key: {CacheKey}", cacheKey);
+        }
+
+        return details;
+    }
+
+    public async Task<UserBookingHistory> GetUserBookingHistoryAsync(int userId)
+    {
+        var cacheKey = string.Format(USER_BOOKING_HISTORY_KEY, userId);
+
+        var cachedHistory = await _cacheService.GetAsync<UserBookingHistory>(cacheKey);
+        if (cachedHistory != null)
+        {
+            _logger.LogDebug("User booking history found in cache for user: {UserId}", userId);
+            return cachedHistory;
+        }
+
+        _logger.LogDebug("User booking history not in cache, fetching from service for user: {UserId}", userId);
+        var history = await _bookingService.GetUserBookingHistoryAsync(userId);
+
+        if (history != null)
+        {
+            await _cacheService.SetAsync(cacheKey, history, ListCacheExpiration);
+            _logger.LogDebug("User booking history cached for user: {UserId}", userId);
+        }
+
+        return history;
     }
 
     #region Private Helper Methods

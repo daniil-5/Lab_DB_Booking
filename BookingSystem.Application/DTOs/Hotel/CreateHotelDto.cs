@@ -7,14 +7,14 @@ public class CreateHotelDto
 {
     [Required]
     [StringLength(100)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     [StringLength(500)]
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
 
     [Required]
     [StringLength(200)]
-    public string Location { get; set; }
+    public string Location { get; set; } = string.Empty;
 
     [Range(0, 5.0)]
     public decimal Rating { get; set; }

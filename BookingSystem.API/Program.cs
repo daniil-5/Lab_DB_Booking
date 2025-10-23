@@ -127,7 +127,7 @@ builder.Services.AddScoped<ICacheService, RedisCacheService>();
 #endregion
 
 #region Repositories
-builder.Services.AddScoped<IRepository<Booking>, BookingRepository>();
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IHotelRepository, HotelRepository>();
 builder.Services.AddScoped<IRepository<RoomType>, RoomTypeRepository>();
 builder.Services.AddScoped<IRepository<RoomPricing>, RoomPricingRepository>();

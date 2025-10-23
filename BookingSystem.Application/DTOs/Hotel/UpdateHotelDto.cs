@@ -1,21 +1,20 @@
 using System.ComponentModel.DataAnnotations;
-using BookingSystem.Application.DTOs.Hotel;
 
-namespace BookingSystem.Application.Hotel;
+namespace BookingSystem.Application.DTOs.Hotel;
 
 public class UpdateHotelDto: CreateHotelDto
 {
     public int Id { get; set; }
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public string Location { get; set; }
-    public decimal Rating { get; set; }
+    public new string Name { get; set; }
+    public new string Description { get; set; }
+    public new string Location { get; set; }
+    public new decimal Rating { get; set; }
     
-    public decimal BasePrice { get; set; }
+    public new decimal BasePrice { get; set; }
     
-    public ICollection<Domain.Entities.RoomType> RoomTypes { get; set; } = new List<Domain.Entities.RoomType>();
+    public new ICollection<Domain.Entities.RoomType> RoomTypes { get; set; } = new List<Domain.Entities.RoomType>();
     
-    public ICollection<Domain.Entities.Hotel> Photos { get; set; } = new List<Domain.Entities.Hotel>();
+    public new ICollection<Domain.Entities.Hotel> Photos { get; set; } = new List<Domain.Entities.Hotel>();
     
 
 }

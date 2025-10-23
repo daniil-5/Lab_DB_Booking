@@ -8,10 +8,10 @@ public class UpdateRoomTypeDto
         
     [Required(ErrorMessage = "Name is required")]
     [StringLength(100, ErrorMessage = "Name cannot exceed 100 characters")]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
         
     [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
         
     [Required(ErrorMessage = "Bed count is required")]
     [Range(1, 10, ErrorMessage = "Bed count must be between 1 and 10")]

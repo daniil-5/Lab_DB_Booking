@@ -1,10 +1,10 @@
-using BookingSystem.Application.Dtos.Hotel;
+using BookingSystem.Application.DTOs.Hotel;
 
 namespace BookingSystem.Application.DTOs.Hotel;
 
 public class HotelSearchResultDto
 {
-    public IEnumerable<HotelDto> Hotels { get; set; }
+    public IEnumerable<HotelDto> Hotels { get; set; } = new List<HotelDto>();
     public int TotalCount { get; set; }
     public int PageNumber { get; set; }
     public int PageSize { get; set; }

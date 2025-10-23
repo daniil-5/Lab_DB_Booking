@@ -2,40 +2,42 @@ using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Enums;
 using BookingSystem.Domain.Interfaces;
-using Microsoft.Extensions.Logging;
 
 namespace BookingSystem.Application.Services;
 
 public class UserActionAuditService : IUserActionAuditService
 {
-    private readonly IUserActionAuditRepository _auditRepository;
-    private readonly ILogger<UserActionAuditService> _logger;
+    private readonly IUserActionAuditRepository _userActionAuditRepository;
 
-    public UserActionAuditService(IUserActionAuditRepository auditRepository, ILogger<UserActionAuditService> logger)
+    public UserActionAuditService(IUserActionAuditRepository userActionAuditRepository)
     {
-        _auditRepository = auditRepository;
-        _logger = logger;
+        _userActionAuditRepository = userActionAuditRepository;
+    }
+
+    public async Task<UserActionAudit?> GetByIdAsync(int id)
+    {
+        return await _userActionAuditRepository.GetByIdAsync(id);
+    }
+
+    public async Task<IEnumerable<UserActionAudit>> GetAllAsync()
+    {
+        return await _userActionAuditRepository.GetAllAsync();
+    }
+
+    public async Task<IEnumerable<UserActionAudit>> GetByUserIdAsync(int userId)
+    {
+        return await _userActionAuditRepository.GetByUserIdAsync(userId);
     }
 
     public async Task AuditActionAsync(int userId, UserActionType actionType, bool isSuccess)
     {
-        _logger.LogInformation("Auditing action {ActionType} for user {UserId}. Success: {IsSuccess}", actionType, userId, isSuccess);
-        try
+        var audit = new UserActionAudit
         {
-            var audit = new UserActionAudit
-            {
-                UserId = userId,
-                UserActionType = actionType,
-                IsSuccess = isSuccess,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await _auditRepository.AddAsync(audit);
-            _logger.LogInformation("Successfully audited action {ActionType} for user {UserId}.", actionType, userId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error auditing action {ActionType} for user {UserId}.", actionType, userId);
-        }
+            UserId = userId,
+            UserActionType = actionType,
+            IsSuccess = isSuccess,
+            CreatedAt = DateTime.UtcNow
+        };
+        await _userActionAuditRepository.AddAsync(audit);
     }
 }
