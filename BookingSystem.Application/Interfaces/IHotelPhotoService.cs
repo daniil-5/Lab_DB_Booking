@@ -8,7 +8,7 @@ public interface IHotelPhotoService
     Task<HotelPhotoDto> CreateHotelPhotoAsync(CreateHotelPhotoDto photoDto);
     Task<HotelPhotoDto> UpdateHotelPhotoAsync(UpdateHotelPhotoDto photoDto);
     Task DeleteHotelPhotoAsync(int id);
-    Task<HotelPhotoDto> UploadHotelPhotoAsync(IFormFile file, int hotelId, string description = null, bool isMain = false);
+    Task<HotelPhotoDto> UploadHotelPhotoAsync(IFormFile file, int hotelId, string? description = null, bool isMain = false);
     Task<IEnumerable<HotelPhotoDto>> UploadMultipleHotelPhotosAsync(IEnumerable<IFormFile> files, int hotelId);
     Task<HotelPhotoDto> GetHotelPhotoByIdAsync(int id);
     Task<IEnumerable<HotelPhotoDto>> GetAllHotelPhotosAsync();

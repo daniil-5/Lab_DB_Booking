@@ -3,7 +3,7 @@ namespace BookingSystem.Application.DTOs.RoomType;
 public class RoomTypePerformance
 {
     public int RoomTypeId { get; set; }
-    public string RoomTypeName { get; set; }
+    public string RoomTypeName { get; set; } = string.Empty;
     public int Capacity { get; set; }
     public decimal BasePrice { get; set; }
     public int BookingCount { get; set; }

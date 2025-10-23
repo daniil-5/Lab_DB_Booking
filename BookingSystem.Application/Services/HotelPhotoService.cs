@@ -34,7 +34,7 @@ public class HotelPhotoService : IHotelPhotoService
         return MapToDto(hotelPhoto);
     }
 
-    public async Task<HotelPhotoDto> UploadHotelPhotoAsync(IFormFile file, int hotelId, string description = null, bool isMain = false)
+    public async Task<HotelPhotoDto> UploadHotelPhotoAsync(IFormFile file, int hotelId, string? description = null, bool isMain = false)
     {
         if (file == null || file.Length == 0)
             throw new ArgumentException("File is required and must not be empty", nameof(file));

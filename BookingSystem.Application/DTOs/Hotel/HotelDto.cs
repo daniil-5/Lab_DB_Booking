@@ -1,13 +1,13 @@
 using BookingSystem.Application.DTOs.HotelPhoto;
 
-namespace BookingSystem.Application.Dtos.Hotel;
+namespace BookingSystem.Application.DTOs.Hotel;
 
 public class HotelDto
 {
     public int Id { get; set; }
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public string Location { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Location { get; set; } = string.Empty;
     public decimal Rating { get; set; }
     
     public decimal BasePrice { get; set; }

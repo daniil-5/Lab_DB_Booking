@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using BookingSystem.Application.DTOs.Booking;
+using BookingSystem.Application.DTOs.User;
+using BookingSystem.Domain.DTOs.Booking;
+using BookingSystem.Domain.DTOs.User;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -152,5 +155,36 @@ public class BookingsController : ControllerBase
     {
         var bookings = await _bookingService.GetAllBookingsAsync();
         return Ok(bookings);
+    }
+
+    [HttpGet("details")]
+    [Authorize(Roles = "Manager,Admin")]
+    public async Task<ActionResult<IEnumerable<BookingDetails>>> GetBookingsWithDetails([FromQuery] int? userId, [FromQuery] int? hotelId, [FromQuery] int? status)
+    {
+        var bookings = await _bookingService.GetBookingsWithDetailsAsync(userId, hotelId, status);
+        return Ok(bookings);
+    }
+
+    [HttpGet("user/{userId}/history")]
+    public async Task<ActionResult<UserBookingHistory>> GetUserBookingHistory(int userId)
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            return Unauthorized("User ID not found in token");
+        }
+
+        if (!User.IsInRole("Manager") && !User.IsInRole("Admin") && userId != int.Parse(currentUserId))
+        {
+            return Forbid();
+        }
+
+        var history = await _bookingService.GetUserBookingHistoryAsync(userId);
+        if (history == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(history);
     }
 }

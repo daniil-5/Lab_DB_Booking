@@ -3,20 +3,21 @@ using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Enums;
 using BookingSystem.Domain.Interfaces;
-
+using BookingSystem.Domain.DTOs.Booking;
+using BookingSystem.Domain.DTOs.User;
 
 namespace BookingSystem.Application.Services
 {
     public class BookingService : IBookingService
     {
-        private readonly IRepository<Domain.Entities.Booking> _bookingRepository;
+        private readonly IBookingRepository _bookingRepository;
         private readonly IRepository<Domain.Entities.RoomType> _roomTypeRepository;
         private readonly IHotelRepository _hotelRepository;
         private readonly IRepository<RoomPricing> _pricingRepository;
         private readonly IUserActionAuditService _auditService;
 
         public BookingService(
-            IRepository<Domain.Entities.Booking> bookingRepository,
+            IBookingRepository bookingRepository,
             IRepository<Domain.Entities.RoomType> roomTypeRepository,
             IHotelRepository hotelRepository,
             IRepository<RoomPricing> pricingRepository,
@@ -289,6 +290,73 @@ namespace BookingSystem.Application.Services
                 b => b.HotelId == hotelId);
                                       
             return bookings.Select(MapToDto);
+        }
+
+        public async Task<IEnumerable<BookingDetails>> GetBookingsWithDetailsAsync(int? userId = null, int? hotelId = null, int? status = null)
+        {
+            return await _bookingRepository.GetBookingsWithDetailsAsync(userId, hotelId, status);
+        }
+
+        public async Task<UserBookingHistory> GetUserBookingHistoryAsync(int userId)
+        {
+            var result = await _bookingRepository.GetUserBookingHistoryAsync(userId);
+            if (result == null)
+                return null;
+
+            var dictionary = (IDictionary<string, object>)result;
+
+            var recentBookingsRaw = dictionary.ContainsKey("recentbookings") ? dictionary["recentbookings"] : null;
+            var recentBookings = (recentBookingsRaw as IEnumerable<dynamic>)
+                ?.Where(b => b != null) // Filter out null bookings
+                .Select(b =>
+                {
+                    var bDict = (IDictionary<string, object>)b;
+                    return new UserRecentBooking
+                    {
+                        BookingId = (int)bDict["bookingid"],
+                        CheckInDate = (DateTime)bDict["checkindate"],
+                        CheckOutDate = (DateTime)bDict["checkoutdate"],
+                        Status = (int)bDict["status"],
+                        TotalPrice = (decimal)bDict["totalprice"],
+                        HotelName = (string)bDict["hotelname"],
+                        Location = (string)bDict["location"],
+                        RoomTypeName = (string)bDict["roomtypename"]
+                    };
+                }).ToList() ?? new List<UserRecentBooking>();
+
+            var favoriteLocationsRaw = dictionary.ContainsKey("favoritelocations") ? dictionary["favoritelocations"] : null;
+            var favoriteLocations = (favoriteLocationsRaw as IEnumerable<dynamic>)
+                ?.Where(l => l != null) // Filter out null locations
+                .Select(l =>
+                {
+                    var lDict = (IDictionary<string, object>)l;
+                    return new BookingSystem.Domain.DTOs.Booking.LocationStatistic
+                    {
+                        Location = (string)lDict["location"],
+                        BookingCount = Convert.ToInt32(lDict["bookingcount"]),
+                        TotalSpent = (decimal)lDict["totalspent"]
+                    };
+                }).ToList() ?? new List<BookingSystem.Domain.DTOs.Booking.LocationStatistic>();
+
+            var history = new UserBookingHistory
+            {
+                UserId = (int)dictionary["userid"],
+                Username = (string)dictionary["username"],
+                Email = (string)dictionary["email"],
+                FullName = (string)dictionary["fullname"],
+                TotalBookings = Convert.ToInt32(dictionary["totalbookings"]),
+                CompletedBookings = Convert.ToInt32(dictionary["completedbookings"]),
+                CancelledBookings = Convert.ToInt32(dictionary["cancelledbookings"]),
+                TotalSpent = (decimal)dictionary["totalspent"],
+                AverageBookingValue = (decimal)dictionary["averagebookingvalue"],
+                FirstBookingDate = (DateTime?)dictionary["firstbookingdate"],
+                LastBookingDate = (DateTime?)dictionary["lastbookingdate"],
+                UniqueHotelsVisited = Convert.ToInt32(dictionary["uniquehotelsvisited"]),
+                RecentBookings = recentBookings,
+                FavoriteLocations = favoriteLocations
+            };
+
+            return history;
         }
 
         private async Task<decimal> CalculateTotalPrice(CreateBookingDto dto)

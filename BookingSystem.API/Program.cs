@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using BookingSystem.Application.Decorators;
 using BookingSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -47,6 +48,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -98,6 +100,7 @@ Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 var dataSourceBuilder = new NpgsqlDataSourceBuilder(builder.Configuration.GetConnectionString("DefaultConnection"));
 dataSourceBuilder.MapEnum<BookingStatus>("booking_status");
 dataSourceBuilder.MapEnum<UserRole>("user_role");
+dataSourceBuilder.MapEnum<UserActionType>("user_action_type");
 var dataSource = dataSourceBuilder.Build();
 builder.Services.AddSingleton(dataSource);
 
@@ -127,7 +130,7 @@ builder.Services.AddScoped<ICacheService, RedisCacheService>();
 #endregion
 
 #region Repositories
-builder.Services.AddScoped<IRepository<Booking>, BookingRepository>();
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IHotelRepository, HotelRepository>();
 builder.Services.AddScoped<IRepository<RoomType>, RoomTypeRepository>();
 builder.Services.AddScoped<IRepository<RoomPricing>, RoomPricingRepository>();

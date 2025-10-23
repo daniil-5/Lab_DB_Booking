@@ -2,7 +2,7 @@ namespace BookingSystem.Application.DTOs.User;
 
 public class UserSearchResultDto
 {
-    public IEnumerable<UserDto> Users { get; set; }
+    public IEnumerable<UserDto> Users { get; set; } = new List<UserDto>();
     public int TotalCount { get; set; }
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
