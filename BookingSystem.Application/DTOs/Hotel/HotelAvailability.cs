@@ -1,17 +1,18 @@
-namespace BookingSystem.Application.DTOs.Hotel;
-
-public class HotelAvailability
+namespace BookingSystem.Application.DTOs.Hotel
 {
-    public int HotelId { get; set; }
-    public string HotelName { get; set; } = string.Empty;
-    public string Location { get; set; } = string.Empty;
-    public decimal Rating { get; set; }
-    public string Description { get; set; } = string.Empty;
-    public int RoomTypeId { get; set; }
-    public string RoomTypeName { get; set; } = string.Empty;
-    public int Capacity { get; set; }
-    public decimal Price { get; set; }
-    public decimal Area { get; set; }
-    public int PhotoCount { get; set; }
-    public int BookedCount { get; set; }
+    public class HotelAvailability
+    {
+        public required int HotelId { get; set; }
+        public required string HotelName { get; set; }
+        public required string Location { get; set; }
+        public required double Rating { get; set; }
+        public required string Description { get; set; }
+        public required int RoomTypeId { get; set; }
+        public required string RoomTypeName { get; set; }
+        public required int Capacity { get; set; }
+        public required decimal Price { get; set; }
+        public required int Area { get; set; }
+        public required int PhotoCount { get; set; }
+        public required int BookedCount { get; set; }
+    }
 }

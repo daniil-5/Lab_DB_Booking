@@ -2,8 +2,8 @@ using BookingSystem.Application.DTOs.Booking;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using BookingSystem.Application.DTOs.User;
 using BookingSystem.Domain.DTOs.Booking;
-using BookingSystem.Domain.DTOs.User;
 
 namespace BookingSystem.Application.Decorators;
 public class CachedBookingService : IBookingService
@@ -385,6 +385,25 @@ public class CachedBookingService : IBookingService
         }
 
         return history;
+    }
+
+    public async Task<IEnumerable<BookingSystem.Domain.DTOs.Booking.ActiveBookingDetailsDto>> GetActiveBookingsWithDetailsAsync()
+    {
+        const string cacheKey = "bookings:active:details";
+
+        var cachedBookings = await _cacheService.GetAsync<IEnumerable<BookingSystem.Domain.DTOs.Booking.ActiveBookingDetailsDto>>(cacheKey);
+        if (cachedBookings != null)
+        {
+            _logger.LogDebug("Active booking details found in cache");
+            return cachedBookings;
+        }
+
+        _logger.LogDebug("Active booking details not found in cache, fetching from database");
+        var bookings = await _bookingService.GetActiveBookingsWithDetailsAsync();
+
+        await _cacheService.SetAsync(cacheKey, bookings, ListCacheExpiration);
+        _logger.LogDebug("Active booking details cached");
+        return bookings;
     }
 
     #region Private Helper Methods

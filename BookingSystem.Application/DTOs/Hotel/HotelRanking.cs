@@ -1,15 +1,16 @@
-namespace BookingSystem.Application.DTOs.Hotel;
-
-public class HotelRanking
+namespace BookingSystem.Application.DTOs.Hotel
 {
-    public int HotelId { get; set; }
-    public string HotelName { get; set; } = string.Empty;
-    public string Location { get; set; } = string.Empty;
-    public decimal Rating { get; set; }
-    public decimal BasePrice { get; set; }
-    public int BookingCount { get; set; }
-    public decimal TotalRevenue { get; set; }
-    public int RankInLocation { get; set; }
-    public int OverallRevenueRank { get; set; }
-    public decimal MarketShareInLocation { get; set; }
+    public class HotelRanking
+    {
+        public required int HotelId { get; set; }
+        public required string HotelName { get; set; }
+        public required string Location { get; set; }
+        public required double Rating { get; set; }
+        public required decimal BasePrice { get; set; }
+        public required int BookingCount { get; set; }
+        public required decimal TotalRevenue { get; set; }
+        public required int RankInLocation { get; set; }
+        public required int OverallRevenueRank { get; set; }
+        public required decimal MarketShareInLocation { get; set; }
+    }
 }

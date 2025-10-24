@@ -1,9 +1,7 @@
 // HotelRepository.cs
 
-using BookingSystem.Application.DTOs.Booking;
-using BookingSystem.Application.DTOs.Hotel;
-using BookingSystem.Application.DTOs.RoomType;
-using BookingSystem.Application.DTOs.User;
+using BookingSystem.Domain.DTOs.Hotel;
+using BookingSystem.Domain.DTOs.RoomType;
 using Dapper;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Interfaces;
@@ -170,10 +168,6 @@ public class HotelRepository : IHotelRepository
     return await conn.QueryAsync<HotelStatistics>(sql);
 }
 
-/// <summary>
-/// Search hotels by location with availability check for specific dates
-/// Demonstrates: Complex JOIN, subquery, date filtering
-/// </summary>
 public async Task<IEnumerable<HotelAvailability>> SearchAvailableHotelsAsync(
     string location, 
     DateTime checkIn, 
@@ -215,7 +209,7 @@ public async Task<IEnumerable<HotelAvailability>> SearchAvailableHotelsAsync(
         AND rt.capacity >= @guestCount
         GROUP BY h.id, h.name, h.location, h.rating, h.description, 
                  rt.id, rt.name, rt.capacity, rt.base_price, rt.area
-        HAVING COUNT(DISTINCT hp.id) > 0  -- only hotels with photos
+        HAVING COUNT(DISTINCT hp.id) > 0
         ORDER BY h.rating DESC, rt.base_price ASC";
     
     return await conn.QueryAsync<HotelAvailability>(sql, new 
@@ -227,10 +221,6 @@ public async Task<IEnumerable<HotelAvailability>> SearchAvailableHotelsAsync(
     });
 }
 
-/// <summary>
-/// Get hotels ranked by popularity in each location
-/// Demonstrates: Window functions, CTEs, ranking
-/// </summary>
 public async Task<IEnumerable<HotelRanking>> GetHotelsRankedByLocationAsync()
 {
     using var conn = _context.CreateConnection();
@@ -270,15 +260,10 @@ public async Task<IEnumerable<HotelRanking>> GetHotelsRankedByLocationAsync()
     return await conn.QueryAsync<HotelRanking>(sql);
 }
 
-/// <summary>
-/// Get detailed hotel performance report with room type breakdown
-/// Demonstrates: Multiple joins, nested aggregations, CASE statements
-/// </summary>
 public async Task<HotelPerformanceReport> GetHotelPerformanceReportAsync(int hotelId)
 {
     using var conn = _context.CreateConnection();
     
-    // Main hotel info with overall statistics
     var hotelSql = @"
         SELECT 
             h.id AS HotelId,
@@ -301,7 +286,6 @@ public async Task<HotelPerformanceReport> GetHotelPerformanceReportAsync(int hot
     
     if (hotel == null) return null;
     
-    // Room type performance breakdown
     var roomTypesSql = @"
         SELECT 
             rt.id AS RoomTypeId,
@@ -329,10 +313,6 @@ public async Task<HotelPerformanceReport> GetHotelPerformanceReportAsync(int hot
     return hotel;
 }
 
-/// <summary>
-/// Get monthly booking trends for hotels
-/// Demonstrates: Date grouping, time series analysis
-/// </summary>
 public async Task<IEnumerable<MonthlyBookingTrend>> GetMonthlyBookingTrendsAsync(int? hotelId = null, int months = 12)
 {
     using var conn = _context.CreateConnection();
@@ -351,7 +331,7 @@ public async Task<IEnumerable<MonthlyBookingTrend>> GetMonthlyBookingTrendsAsync
         INNER JOIN bookings b ON h.id = b.hotel_id
         WHERE h.is_deleted = false 
         AND b.is_deleted = false
-        AND b.created_at >= CURRENT_TIMESTAMP - INTERVAL '@months months'
+        AND b.created_at >= CURRENT_TIMESTAMP - make_interval(months => @months)
         AND (@hotelId IS NULL OR h.id = @hotelId)
         GROUP BY h.id, h.name, DATE_TRUNC('month', b.created_at)
         ORDER BY h.id, Month DESC";
@@ -359,4 +339,21 @@ public async Task<IEnumerable<MonthlyBookingTrend>> GetMonthlyBookingTrendsAsync
     return await conn.QueryAsync<MonthlyBookingTrend>(sql, new { hotelId, months });
 }
 
+public async Task<IEnumerable<Hotel>> GetHotelsOrderedByRatingAndNameAsync()
+{
+    using var conn = _context.CreateConnection();
+    return await conn.QueryAsync<Hotel>("SELECT * FROM hotels WHERE is_deleted = FALSE ORDER BY rating DESC, name ASC");
+}
+
+public async Task<IEnumerable<Hotel>> GetPremiumHotelsAsync()
+{
+    using var conn = _context.CreateConnection();
+    var sql = @"
+        SELECT h.*
+        FROM hotels h
+        WHERE h.is_deleted = FALSE
+          AND h.base_price > (SELECT AVG(base_price) FROM hotels WHERE is_deleted = FALSE)
+        ORDER BY h.base_price DESC;";
+    return await conn.QueryAsync<Hotel>(sql);
+}
 }

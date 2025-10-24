@@ -116,7 +116,7 @@ public class HotelPhotosController : ControllerBase
     public async Task<ActionResult<HotelPhotoDto>> UploadPhoto(
         IFormFile file, 
         [FromQuery] int hotelId, 
-        [FromQuery] string description = null, 
+        [FromQuery] string? description = null, 
         [FromQuery] bool isMain = false)
     {
         try

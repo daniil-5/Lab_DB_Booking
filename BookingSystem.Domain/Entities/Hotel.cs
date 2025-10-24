@@ -12,7 +12,7 @@ public class Hotel : BaseEntity
     [Column("location")]
     public string Location { get; set; } = null!;
     [Column("rating")]
-    public decimal Rating { get; set; }
+    public double Rating { get; set; }
     [Column("base_price")]
     public decimal BasePrice { get; set; }
 

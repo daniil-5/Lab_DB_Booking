@@ -84,4 +84,24 @@ public class UserRepository : IUserRepository
         return await conn.QuerySingleOrDefaultAsync<User>(
             "select * from users where email=@email and is_deleted=false", new { email });
     }
+
+    public async Task<IEnumerable<User>> GetActiveUsersOrderedByRegistrationDateAsync()
+    {
+        using var conn = _context.CreateConnection();
+        return await conn.QueryAsync<User>(
+            "SELECT id, username, email, first_name, last_name, phone_number, role, created_at, updated_at FROM users WHERE is_deleted = FALSE ORDER BY created_at DESC");
+    }
+
+    public async Task<IEnumerable<User>> GetUsersWithNoBookingsAsync()
+    {
+        using var conn = _context.CreateConnection();
+        var sql = @"
+            SELECT u.*
+            FROM users u
+            LEFT JOIN bookings b ON u.id = b.user_id
+            WHERE u.is_deleted = FALSE
+              AND b.id IS NULL
+            ORDER BY u.created_at ASC;";
+        return await conn.QueryAsync<User>(sql);
+    }
 }

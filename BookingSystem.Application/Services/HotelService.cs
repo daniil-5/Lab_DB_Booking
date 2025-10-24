@@ -5,6 +5,8 @@ using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Interfaces;
 using BookingSystem.Domain.Enums;
 using Microsoft.AspNetCore.Http;
+using BookingSystem.Application.DTOs.Booking;
+using BookingSystem.Application.DTOs.RoomType;
 
 namespace BookingSystem.Application.Services;
 
@@ -28,7 +30,7 @@ public class HotelService : IHotelService
             Name = hotelDto.Name,
             Description = hotelDto.Description,
             Location = hotelDto.Location,
-            Rating = hotelDto.Rating,
+            Rating = (double)hotelDto.Rating,
             BasePrice = hotelDto.BasePrice,
             CreatedAt = DateTime.UtcNow
         };
@@ -52,7 +54,7 @@ public class HotelService : IHotelService
         existingHotel.Name = hotelDto.Name;
         existingHotel.Description = hotelDto.Description;
         existingHotel.Location = hotelDto.Location;
-        existingHotel.Rating = hotelDto.Rating;
+        existingHotel.Rating = (double)hotelDto.Rating;
         existingHotel.BasePrice = hotelDto.BasePrice;
 
         existingHotel.UpdatedAt = DateTime.UtcNow;
@@ -127,7 +129,7 @@ public class HotelService : IHotelService
             Name = hotel.Name,
             Description = hotel.Description,
             Location = hotel.Location,
-            Rating = hotel.Rating,
+            Rating = (decimal)hotel.Rating,
             BasePrice = hotel.BasePrice,
 
             CreatedAt = hotel.CreatedAt,
@@ -163,91 +165,148 @@ public class HotelService : IHotelService
         }
         throw new InvalidOperationException("User ID not found in token");
     }
-    // public async Task<IEnumerable<HotelStatistics>> GetHotelsStatisticsAsync()
-    // {
-    //     return await _hotelRepository.GetHotelsWithStatisticsAsync();
-    // }
-    // public async Task<IEnumerable<HotelAvailability>> SearchAvailableHotelsAsync(
-    //     string location, 
-    //     DateTime checkIn, 
-    //     DateTime checkOut, 
-    //     int guestCount)
-    // {
-    //     if (checkOut <= checkIn)
-    //     {
-    //         throw new ArgumentException("Check-out date must be after check-in date");
-    //     }
-    //
-    //     if (guestCount <= 0)
-    //     {
-    //         throw new ArgumentException("Guest count must be greater than zero");
-    //     }
-    //
-    //     return await _hotelRepository.SearchAvailableHotelsAsync(
-    //         location, checkIn, checkOut, guestCount);
-    // }
-    // public async Task<IEnumerable<HotelRanking>> GetHotelsRankedByLocationAsync()
-    // {
-    //     return await _hotelRepository.GetHotelsRankedByLocationAsync();
-    // }
-    //
-    // /// <summary>
-    // /// Get detailed performance report for a specific hotel
-    // /// </summary>
-    // public async Task<HotelPerformanceReport> GetHotelPerformanceReportAsync(int hotelId)
-    // {
-    //     var report = await _hotelRepository.GetHotelPerformanceReportAsync(hotelId);
-    //     
-    //     if (report == null)
-    //     {
-    //         throw new KeyNotFoundException($"Hotel with ID {hotelId} not found");
-    //     }
-    //
-    //     return report;
-    // }
-    //
-    // /// <summary>
-    // /// Get monthly booking trends for hotels
-    // /// </summary>
-    // public async Task<IEnumerable<MonthlyBookingTrend>> GetMonthlyBookingTrendsAsync(
-    //     int? hotelId = null, 
-    //     int months = 12)
-    // {
-    //     if (months <= 0 || months > 24)
-    //     {
-    //         throw new ArgumentException("Months must be between 1 and 24");
-    //     }
-    //
-    //     return await _hotelRepository.GetMonthlyBookingTrendsAsync(hotelId, months);
-    // }
-    //
-    // private static HotelDto MapToDto(Domain.Entities.Hotel hotel)
-    // {
-    //     return new HotelDto
-    //     {
-    //         Id = hotel.Id,
-    //         Name = hotel.Name,
-    //         Description = hotel.Description,
-    //         Location = hotel.Location,
-    //         Rating = hotel.Rating,
-    //         BasePrice = hotel.BasePrice,
-    //         CreatedAt = hotel.CreatedAt,
-    //         UpdatedAt = hotel.UpdatedAt,
-    //         RoomTypes = hotel.RoomTypes?
-    //             .Where(rt => !rt.IsDeleted)
-    //             .ToList() ?? new List<Domain.Entities.RoomType>(),
-    //         Photos = hotel.Photos?
-    //             .Where(p => !p.IsDeleted)
-    //             .Select(p => new HotelPhotoDto
-    //             {
-    //                 Id = p.Id,
-    //                 HotelId = p.HotelId,
-    //                 Url = p.Url,
-    //                 Description = p.Description,
-    //                 IsMain = p.IsMain,
-    //                 CreatedAt = p.CreatedAt
-    //             })
-    //             .ToList() ?? new List<HotelPhotoDto>()
-    //     };
-    // }
+    public async Task<IEnumerable<HotelStatistics>> GetHotelsStatisticsAsync()
+    {
+        var domainStatistics = await _hotelRepository.GetHotelsWithStatisticsAsync();
+        return domainStatistics.Select(s => new HotelStatistics
+        {
+            HotelId = s.HotelId,
+            HotelName = s.HotelName,
+            Location = s.Location,
+            Rating = s.Rating,
+            BasePrice = s.BasePrice,
+            TotalBookings = s.TotalBookings,
+            ConfirmedBookings = s.ConfirmedBookings,
+            CancelledBookings = s.CancelledBookings,
+            TotalRevenue = s.TotalRevenue,
+            AverageBookingPrice = s.AverageBookingPrice,
+            TotalRoomTypes = s.TotalRoomTypes,
+            TotalPhotos = s.TotalPhotos
+        });
+    }
+    public async Task<IEnumerable<HotelAvailability>> SearchAvailableHotelsAsync(
+        string location, 
+        DateTime checkIn, 
+        DateTime checkOut, 
+        int guestCount)
+    {
+        if (checkOut <= checkIn)
+        {
+            throw new ArgumentException("Check-out date must be after check-in date");
+        }
+    
+        if (guestCount <= 0)
+        {
+            throw new ArgumentException("Guest count must be greater than zero");
+        }
+    
+        var domainAvailability = await _hotelRepository.SearchAvailableHotelsAsync(
+            location, checkIn, checkOut, guestCount);
+
+        return domainAvailability.Select(a => new HotelAvailability
+        {
+            HotelId = a.HotelId,
+            HotelName = a.HotelName,
+            Location = a.Location,
+            Rating = a.Rating,
+            Description = a.Description,
+            RoomTypeId = a.RoomTypeId,
+            RoomTypeName = a.RoomTypeName,
+            Capacity = a.Capacity,
+            Price = a.Price,
+            Area = a.Area,
+            PhotoCount = a.PhotoCount,
+            BookedCount = a.BookedCount
+        });
+    }
+    public async Task<IEnumerable<HotelRanking>> GetHotelsRankedByLocationAsync()
+    {
+        var domainRankings = await _hotelRepository.GetHotelsRankedByLocationAsync();
+        return domainRankings.Select(r => new HotelRanking
+        {
+            HotelId = r.HotelId,
+            HotelName = r.HotelName,
+            Location = r.Location,
+            Rating = r.Rating,
+            BasePrice = r.BasePrice,
+            BookingCount = r.BookingCount,
+            TotalRevenue = r.TotalRevenue,
+            RankInLocation = r.RankInLocation,
+            OverallRevenueRank = r.OverallRevenueRank,
+            MarketShareInLocation = r.MarketShareInLocation
+        });
+    }
+    
+    public async Task<HotelPerformanceReport> GetHotelPerformanceReportAsync(int hotelId)
+    {
+        var domainReport = await _hotelRepository.GetHotelPerformanceReportAsync(hotelId);
+        
+        if (domainReport == null)
+        {
+            throw new KeyNotFoundException($"Hotel with ID {hotelId} not found");
+        }
+
+        return new HotelPerformanceReport
+        {
+            HotelId = domainReport.HotelId,
+            HotelName = domainReport.HotelName,
+            Location = domainReport.Location,
+            Rating = domainReport.Rating,
+            BasePrice = domainReport.BasePrice,
+            TotalBookings = domainReport.TotalBookings,
+            TotalRevenue = domainReport.TotalRevenue,
+            AverageBookingValue = domainReport.AverageBookingValue,
+            UniqueCustomers = domainReport.UniqueCustomers,
+            TotalRoomTypes = domainReport.TotalRoomTypes,
+            RoomTypePerformance = domainReport.RoomTypePerformance.Select(p => new RoomTypePerformance
+            {
+                RoomTypeId = p.RoomTypeId,
+                RoomTypeName = p.RoomTypeName,
+                Capacity = p.Capacity,
+                BasePrice = p.BasePrice,
+                BookingCount = p.BookingCount,
+                Revenue = p.Revenue,
+                AveragePrice = p.AveragePrice,
+                ConfirmedCount = p.ConfirmedCount,
+                CancelledCount = p.CancelledCount,
+                CancellationRate = p.CancellationRate
+            }).ToList()
+        };
+    }
+    
+    public async Task<IEnumerable<MonthlyBookingTrend>> GetMonthlyBookingTrendsAsync(
+        int? hotelId = null, 
+        int months = 12)
+    {
+        if (months <= 0 || months > 24)
+        {
+            throw new ArgumentException("Months must be between 1 and 24");
+        }
+    
+        var domainTrends = await _hotelRepository.GetMonthlyBookingTrendsAsync(hotelId, months);
+
+        return domainTrends.Select(t => new MonthlyBookingTrend
+        {
+            HotelId = t.HotelId,
+            HotelName = t.HotelName,
+            Month = t.Month,
+            BookingCount = t.BookingCount,
+            Revenue = t.Revenue,
+            AverageBookingValue = t.AverageBookingValue,
+            UniqueCustomers = t.UniqueCustomers,
+            TotalGuests = t.TotalGuests
+        });
+    }
+
+    public async Task<IEnumerable<HotelDto>> GetHotelsOrderedByRatingAndNameAsync()
+    {
+        var hotels = await _hotelRepository.GetHotelsOrderedByRatingAndNameAsync();
+        return hotels.Select(MapToDto).ToList();
+    }
+
+    public async Task<IEnumerable<HotelDto>> GetPremiumHotelsAsync()
+    {
+        var hotels = await _hotelRepository.GetPremiumHotelsAsync();
+        return hotels.Select(MapToDto).ToList();
+    }
 }
