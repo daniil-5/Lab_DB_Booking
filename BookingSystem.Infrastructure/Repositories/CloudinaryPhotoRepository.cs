@@ -68,7 +68,8 @@ public class CloudinaryPhotoRepository : IPhotoRepository
             {
                 PublicId = uploadResult.PublicId,
                 Url = uploadResult.SecureUrl.AbsoluteUri,
-                Format = uploadResult.Format
+                Format = uploadResult.Format,
+                Bytes = uploadResult.Bytes
             };
         }
         catch (Exception ex)
@@ -192,7 +193,9 @@ public class CloudinaryPhotoRepository : IPhotoRepository
                 .Select(resource => new PhotoUploadResult
                 {
                     PublicId = resource.PublicId,
-                    Url = resource.SecureUrl.AbsoluteUri
+                    Url = resource.SecureUrl.AbsoluteUri,
+                    Format = resource.Format,
+                    Bytes = resource.Bytes
                 })
                 .ToList();
      

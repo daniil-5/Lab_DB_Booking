@@ -40,9 +40,9 @@ public class RoomTypeService : IRoomTypeService
                 Description = roomTypeDto.Description,
                 Capacity = roomTypeDto.Capacity,
                 BasePrice = roomTypeDto.BasePrice,
-                Area = roomTypeDto.Area,
-                Floor = roomTypeDto.Floor,
-                HotelId = roomTypeDto.HotelId
+                Area = (int)roomTypeDto.Area,
+                HotelId = roomTypeDto.HotelId,
+                Hotel = hotel
             };
 
             await _roomTypeRepository.AddAsync(roomType);
@@ -71,8 +71,7 @@ public class RoomTypeService : IRoomTypeService
             existingRoomType.Description = roomTypeDto.Description;
             existingRoomType.Capacity = roomTypeDto.Capacity;
             existingRoomType.BasePrice = roomTypeDto.BasePrice;
-            existingRoomType.Area = roomTypeDto.Area;
-            existingRoomType.Floor = roomTypeDto.Floor;
+            existingRoomType.Area = (int)roomTypeDto.Area;
             existingRoomType.HotelId = roomTypeDto.HotelId;
 
             await _roomTypeRepository.UpdateAsync(existingRoomType);
@@ -141,7 +140,6 @@ public class RoomTypeService : IRoomTypeService
                 BasePrice = roomType.BasePrice,
                 Capacity = roomType.Capacity,
                 Area = roomType.Area,
-                Floor = roomType.Floor,
                 HotelId = roomType.HotelId
             };
         }

@@ -14,4 +14,6 @@ public interface IUserService
     Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordDto);
     
     Task<bool> VerifyUserPasswordAsync(string email, string password);
+    Task<IEnumerable<UserDto>> GetActiveUsersOrderedByRegistrationDateAsync();
+    Task<IEnumerable<UserDto>> GetUsersWithNoBookingsAsync();
 }

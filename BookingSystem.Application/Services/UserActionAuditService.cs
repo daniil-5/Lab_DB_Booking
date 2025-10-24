@@ -40,4 +40,24 @@ public class UserActionAuditService : IUserActionAuditService
         };
         await _userActionAuditRepository.AddAsync(audit);
     }
+
+    public async Task<IEnumerable<UserActionAudit>> GetByDateRangeAsync(DateTimeOffset startDate, DateTimeOffset endDate)
+    {
+        return await _userActionAuditRepository.GetByDateRangeAsync(startDate, endDate);
+    }
+
+    public async Task<IEnumerable<UserActionAudit>> GetMostRecentUserActionsAsync()
+    {
+        return await _userActionAuditRepository.GetMostRecentUserActionsAsync();
+    }
+
+    public async Task<IEnumerable<UserActionAudit>> GetActionsByUserAndTypeAsync(int userId, UserActionType actionType)
+    {
+        return await _userActionAuditRepository.GetActionsByUserAndTypeAsync(userId, actionType);
+    }
+
+    public async Task<(IEnumerable<UserActionAudit> Items, int TotalCount)> GetWithPaginationAsync(int pageNumber, int pageSize)
+    {
+        return await _userActionAuditRepository.GetWithPaginationAsync(pageNumber, pageSize);
+    }
 }

@@ -5,7 +5,7 @@ using System.Security.Claims;
 using BookingSystem.Application.DTOs.Booking;
 using BookingSystem.Application.DTOs.User;
 using BookingSystem.Domain.DTOs.Booking;
-using BookingSystem.Domain.DTOs.User;
+
 
 [Route("api/[controller]")]
 [ApiController]
@@ -186,5 +186,13 @@ public class BookingsController : ControllerBase
         }
 
         return Ok(history);
+    }
+
+    [HttpGet("active-details")]
+    [Authorize(Roles = "Manager,Admin")]
+    public async Task<ActionResult<IEnumerable<BookingSystem.Domain.DTOs.Booking.ActiveBookingDetailsDto>>> GetActiveBookingsWithDetails()
+    {
+        var bookings = await _bookingService.GetActiveBookingsWithDetailsAsync();
+        return Ok(bookings);
     }
 }

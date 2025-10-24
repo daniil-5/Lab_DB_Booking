@@ -282,6 +282,45 @@ public class BookingRepository : IBookingRepository
 
         }
 
+    public async Task<IEnumerable<BookingSystem.Domain.DTOs.Booking.ActiveBookingDetailsDto>> GetActiveBookingsWithDetailsAsync()
+    {
+        using var conn = _context.CreateConnection();
+
+        var sql = @"
+            SELECT
+                b.id AS BookingId,
+                b.check_in_date AS CheckInDate,
+                b.check_out_date AS CheckOutDate,
+                b.guest_count AS GuestCount,
+                b.total_price AS TotalPrice,
+                CASE b.status
+                    WHEN 0 THEN 'Pending'
+                    WHEN 1 THEN 'Confirmed'
+                    WHEN 2 THEN 'Cancelled'
+                    ELSE 'Unknown'
+                END AS Status,
+                b.created_at AS CreatedAt,
+                u.id AS UserId,
+                u.username AS Username,
+                u.email AS UserEmail,
+                h.id AS HotelId,
+                h.name AS HotelName,
+                h.location AS HotelLocation,
+                rt.id AS RoomTypeId,
+                rt.name AS RoomTypeName,
+                rt.capacity AS RoomTypeCapacity,
+                rt.base_price AS RoomTypeBasePrice
+            FROM bookings b
+            INNER JOIN users u ON b.user_id = u.id
+            INNER JOIN hotels h ON b.hotel_id = h.id
+            INNER JOIN room_types rt ON b.room_type_id = rt.id
+            WHERE b.is_deleted = FALSE
+              AND b.status IN (0, 1) -- Pending (0) or Confirmed (1)
+            ORDER BY b.check_in_date ASC;";
+
+        return await conn.QueryAsync<BookingSystem.Domain.DTOs.Booking.ActiveBookingDetailsDto>(sql);
+    }
+
     }
 
     

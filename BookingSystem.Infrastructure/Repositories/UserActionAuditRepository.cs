@@ -1,4 +1,5 @@
 using BookingSystem.Domain.Entities;
+using BookingSystem.Domain.Enums;
 using BookingSystem.Domain.Interfaces;
 using BookingSystem.Infrastructure.Data;
 using Dapper;
@@ -40,5 +41,53 @@ public class UserActionAuditRepository : IUserActionAuditRepository
         using var connection = _context.CreateConnection();
         var sql = "SELECT * FROM user_action_audit WHERE user_id = @UserId";
         return await connection.QueryAsync<UserActionAudit>(sql, new { UserId = userId });
+    }
+
+    public async Task<IEnumerable<UserActionAudit>> GetByDateRangeAsync(DateTimeOffset startDate, DateTimeOffset endDate)
+    {
+        using var connection = _context.CreateConnection();
+        var sql = "SELECT * FROM user_action_audit WHERE created_at >= @StartDate AND created_at <= @EndDate";
+        return await connection.QueryAsync<UserActionAudit>(sql, new { StartDate = startDate, EndDate = endDate });
+    }
+
+    public async Task<IEnumerable<UserActionAudit>> GetMostRecentUserActionsAsync()
+    {
+        using var connection = _context.CreateConnection();
+        var sql = @"
+          WITH RankedAudits AS (
+          SELECT *,
+          ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY created_at DESC) as rn
+          FROM user_action_audit )
+          SELECT *
+          FROM RankedAudits
+          WHERE rn = 1;
+        ";
+        return await connection.QueryAsync<UserActionAudit>(sql);
+    }
+
+    public async Task<IEnumerable<UserActionAudit>> GetActionsByUserAndTypeAsync(int userId, UserActionType actionType)
+    {
+        using var connection = _context.CreateConnection();
+        var sql = "SELECT * FROM user_action_audit WHERE user_id = @UserId AND user_action_type = @ActionType";
+        return await connection.QueryAsync<UserActionAudit>(sql, new { UserId = userId, ActionType = actionType.ToString() });
+    }
+
+    public async Task<(IEnumerable<UserActionAudit> Items, int TotalCount)> GetWithPaginationAsync(int pageNumber, int pageSize)
+    {
+        using var connection = _context.CreateConnection();
+        var sql = @"
+            SELECT *
+            FROM user_action_audit
+            ORDER BY created_at DESC
+            OFFSET @Offset ROWS
+            FETCH NEXT @PageSize ROWS ONLY;
+        ";
+
+        using var multi = await connection.QueryMultipleAsync(sql, new { Offset = (pageNumber - 1) * pageSize, PageSize = pageSize });
+
+        var items = await multi.ReadAsync<UserActionAudit>();
+        var totalCount = await multi.ReadSingleAsync<int>();
+
+        return (items, totalCount);
     }
 }

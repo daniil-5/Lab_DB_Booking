@@ -2,6 +2,7 @@ using BookingSystem.Application.DTOs.Hotel;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using BookingSystem.Application.DTOs.Booking;
 
 namespace BookingSystem.Application.Decorators
 {
@@ -162,6 +163,69 @@ namespace BookingSystem.Application.Decorators
                 searchKey, searchResult.Hotels.Count());
             
             return searchResult;
+        }
+
+        public Task<IEnumerable<HotelStatistics>> GetHotelsStatisticsAsync()
+        {
+            return _hotelService.GetHotelsStatisticsAsync();
+        }
+
+        public Task<IEnumerable<HotelAvailability>> SearchAvailableHotelsAsync(string location, DateTime checkIn, DateTime checkOut, int guestCount)
+        {
+            return _hotelService.SearchAvailableHotelsAsync(location, checkIn, checkOut, guestCount);
+        }
+
+        public Task<IEnumerable<HotelRanking>> GetHotelsRankedByLocationAsync()
+        {
+            return _hotelService.GetHotelsRankedByLocationAsync();
+        }
+
+        public Task<HotelPerformanceReport> GetHotelPerformanceReportAsync(int hotelId)
+        {
+            return _hotelService.GetHotelPerformanceReportAsync(hotelId);
+        }
+
+        public Task<IEnumerable<MonthlyBookingTrend>> GetMonthlyBookingTrendsAsync(int? hotelId = null, int months = 12)
+        {
+            return _hotelService.GetMonthlyBookingTrendsAsync(hotelId, months);
+        }
+
+        public async Task<IEnumerable<HotelDto>> GetHotelsOrderedByRatingAndNameAsync()
+        {
+            const string cacheKey = "hotels:ordered:rating-name";
+
+            var cachedHotels = await _cacheService.GetAsync<IEnumerable<HotelDto>>(cacheKey);
+            if (cachedHotels != null)
+            {
+                _logger.LogDebug("Hotels ordered by rating and name found in cache");
+                return cachedHotels;
+            }
+
+            _logger.LogDebug("Hotels ordered by rating and name not found in cache, fetching from database");
+            var hotels = await _hotelService.GetHotelsOrderedByRatingAndNameAsync();
+
+            await _cacheService.SetAsync(cacheKey, hotels, AllHotelsExpiration);
+            _logger.LogDebug("Hotels ordered by rating and name cached");
+            return hotels;
+        }
+
+        public async Task<IEnumerable<HotelDto>> GetPremiumHotelsAsync()
+        {
+            const string cacheKey = "hotels:premium";
+
+            var cachedHotels = await _cacheService.GetAsync<IEnumerable<HotelDto>>(cacheKey);
+            if (cachedHotels != null)
+            {
+                _logger.LogDebug("Premium hotels found in cache");
+                return cachedHotels;
+            }
+
+            _logger.LogDebug("Premium hotels not found in cache, fetching from database");
+            var hotels = await _hotelService.GetPremiumHotelsAsync();
+
+            await _cacheService.SetAsync(cacheKey, hotels, AllHotelsExpiration);
+            _logger.LogDebug("Premium hotels cached");
+            return hotels;
         }
 
         #region Private Helper Methods

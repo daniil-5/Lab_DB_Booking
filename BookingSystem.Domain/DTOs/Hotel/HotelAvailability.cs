@@ -1,4 +1,4 @@
-namespace BookingSystem.Application.DTOs.Hotel
+namespace BookingSystem.Domain.DTOs.Hotel
 {
     public class HotelAvailability
     {

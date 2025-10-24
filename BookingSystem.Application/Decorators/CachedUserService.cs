@@ -247,6 +247,40 @@ public class CachedUserService : IUserService
         return await _userService.VerifyUserPasswordAsync(email, password);
     }
 
+    public async Task<IEnumerable<UserDto>> GetActiveUsersOrderedByRegistrationDateAsync()
+    {
+        const string cacheKey = "users:active:ordered";
+        var cachedUsers = await _cacheService.GetAsync<IEnumerable<UserDto>>(cacheKey);
+        if (cachedUsers != null)
+        {
+            _logger.LogDebug("Active users ordered by registration date found in cache");
+            return cachedUsers;
+        }
+
+        _logger.LogDebug("Active users ordered by registration date not found in cache, fetching from database");
+        var users = await _userService.GetActiveUsersOrderedByRegistrationDateAsync();
+        await _cacheService.SetAsync(cacheKey, users, AllUsersCacheExpiration);
+        _logger.LogDebug("Active users ordered by registration date cached");
+        return users;
+    }
+
+    public async Task<IEnumerable<UserDto>> GetUsersWithNoBookingsAsync()
+    {
+        const string cacheKey = "users:nobookings";
+        var cachedUsers = await _cacheService.GetAsync<IEnumerable<UserDto>>(cacheKey);
+        if (cachedUsers != null)
+        {
+            _logger.LogDebug("Users with no bookings found in cache");
+            return cachedUsers;
+        }
+
+        _logger.LogDebug("Users with no bookings not found in cache, fetching from database");
+        var users = await _userService.GetUsersWithNoBookingsAsync();
+        await _cacheService.SetAsync(cacheKey, users, AllUsersCacheExpiration);
+        _logger.LogDebug("Users with no bookings cached");
+        return users;
+    }
+
     #region Private Helper Methods
 
     /// <summary>

@@ -1,7 +1,6 @@
 using BookingSystem.Application.DTOs.Booking;
 using BookingSystem.Application.DTOs.User;
 using BookingSystem.Domain.DTOs.Booking;
-using BookingSystem.Domain.DTOs.User;
 
 namespace BookingSystem.Application.Interfaces;
 
@@ -19,7 +18,7 @@ public interface IBookingService
     Task<BookingResponseDto> UpdateBookingStatusAsync(int id, int statusCode);
     Task<IEnumerable<BookingResponseDto>> GetBookingsByRoomTypeIdAsync(int roomTypeId);
     Task<IEnumerable<BookingResponseDto>> GetBookingsByHotelIdAsync(int hotelId);
-    
     Task<IEnumerable<BookingDetails>> GetBookingsWithDetailsAsync(int? userId = null, int? hotelId = null, int? status = null);
     Task<UserBookingHistory> GetUserBookingHistoryAsync(int userId);
+    Task<IEnumerable<BookingSystem.Domain.DTOs.Booking.ActiveBookingDetailsDto>> GetActiveBookingsWithDetailsAsync();
 }

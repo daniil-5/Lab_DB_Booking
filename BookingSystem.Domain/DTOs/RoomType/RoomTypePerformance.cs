@@ -1,4 +1,4 @@
-namespace BookingSystem.Application.DTOs.RoomType
+namespace BookingSystem.Domain.DTOs.RoomType
 {
     public class RoomTypePerformance
     {

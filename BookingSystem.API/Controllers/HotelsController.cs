@@ -2,6 +2,7 @@ using BookingSystem.Application.DTOs.Hotel;
 using BookingSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using BookingSystem.Application.DTOs.Booking;
 
 namespace BookingSystem.API.Controllers
 {
@@ -164,6 +165,70 @@ namespace BookingSystem.API.Controllers
                 _logger.LogError(ex, "Error searching hotels");
                 return StatusCode(500, "An error occurred while searching for hotels");
             }
+        }
+
+        [HttpGet("statistics")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<ActionResult<IEnumerable<HotelStatistics>>> GetHotelStatistics()
+        {
+            var statistics = await _hotelService.GetHotelsStatisticsAsync();
+            return Ok(statistics);
+        }
+
+        [HttpGet("availability")]
+        [AllowAnonymous]
+        public async Task<ActionResult<IEnumerable<HotelAvailability>>> SearchAvailableHotels(
+            [FromQuery] string location, 
+            [FromQuery] DateTime checkIn, 
+            [FromQuery] DateTime checkOut, 
+            [FromQuery] int guestCount)
+        {
+            var availableHotels = await _hotelService.SearchAvailableHotelsAsync(location, checkIn, checkOut, guestCount);
+            return Ok(availableHotels);
+        }
+
+        [HttpGet("ranking")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<ActionResult<IEnumerable<HotelRanking>>> GetHotelRankings()
+        {
+            var rankings = await _hotelService.GetHotelsRankedByLocationAsync();
+            return Ok(rankings);
+        }
+
+        [HttpGet("{id}/performance")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<ActionResult<HotelPerformanceReport>> GetHotelPerformance(int id)
+        {
+            var report = await _hotelService.GetHotelPerformanceReportAsync(id);
+            if (report == null)
+            {
+                return NotFound();
+            }
+            return Ok(report);
+        }
+
+        [HttpGet("trends")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<ActionResult<IEnumerable<MonthlyBookingTrend>>> GetMonthlyBookingTrends([FromQuery] int? hotelId, [FromQuery] int months = 12)
+        {
+            var trends = await _hotelService.GetMonthlyBookingTrendsAsync(hotelId, months);
+            return Ok(trends);
+        }
+
+        [HttpGet("ordered-by-rating-name")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<ActionResult<IEnumerable<HotelDto>>> GetHotelsOrderedByRatingAndName()
+        {
+            var hotels = await _hotelService.GetHotelsOrderedByRatingAndNameAsync();
+            return Ok(hotels);
+        }
+
+        [HttpGet("premium")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<ActionResult<IEnumerable<HotelDto>>> GetPremiumHotels()
+        {
+            var hotels = await _hotelService.GetPremiumHotelsAsync();
+            return Ok(hotels);
         }
     }
 }

@@ -161,5 +161,21 @@ namespace BookingSystem.API.Controllers
             var user = await _userService.GetUserByUsernameAsync(username);
             return user != null ? Ok(user) : NotFound();
         }
+
+        [HttpGet("active-ordered")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<ActionResult<IEnumerable<UserDto>>> GetActiveUsersOrderedByRegistrationDate()
+        {
+            var users = await _userService.GetActiveUsersOrderedByRegistrationDateAsync();
+            return Ok(users);
+        }
+
+        [HttpGet("no-bookings")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsersWithNoBookings()
+        {
+            var users = await _userService.GetUsersWithNoBookingsAsync();
+            return Ok(users);
+        }
     }
 }

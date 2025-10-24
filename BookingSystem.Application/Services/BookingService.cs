@@ -3,8 +3,8 @@ using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Enums;
 using BookingSystem.Domain.Interfaces;
+using BookingSystem.Application.DTOs.User;
 using BookingSystem.Domain.DTOs.Booking;
-using BookingSystem.Domain.DTOs.User;
 
 namespace BookingSystem.Application.Services
 {
@@ -330,13 +330,13 @@ namespace BookingSystem.Application.Services
                 .Select(l =>
                 {
                     var lDict = (IDictionary<string, object>)l;
-                    return new BookingSystem.Domain.DTOs.Booking.LocationStatistic
+                    return new LocationStatistic
                     {
                         Location = (string)lDict["location"],
                         BookingCount = Convert.ToInt32(lDict["bookingcount"]),
                         TotalSpent = (decimal)lDict["totalspent"]
                     };
-                }).ToList() ?? new List<BookingSystem.Domain.DTOs.Booking.LocationStatistic>();
+                }).ToList() ?? new List<LocationStatistic>();
 
             var history = new UserBookingHistory
             {
@@ -345,18 +345,25 @@ namespace BookingSystem.Application.Services
                 Email = (string)dictionary["email"],
                 FullName = (string)dictionary["fullname"],
                 TotalBookings = Convert.ToInt32(dictionary["totalbookings"]),
-                CompletedBookings = Convert.ToInt32(dictionary["completedbookings"]),
+                ConfirmedBookings = Convert.ToInt32(dictionary["completedbookings"]),
                 CancelledBookings = Convert.ToInt32(dictionary["cancelledbookings"]),
                 TotalSpent = (decimal)dictionary["totalspent"],
+                MemberSince = (DateTime)dictionary["firstbookingdate"],
                 AverageBookingValue = (decimal)dictionary["averagebookingvalue"],
                 FirstBookingDate = (DateTime?)dictionary["firstbookingdate"],
                 LastBookingDate = (DateTime?)dictionary["lastbookingdate"],
                 UniqueHotelsVisited = Convert.ToInt32(dictionary["uniquehotelsvisited"]),
                 RecentBookings = recentBookings,
-                FavoriteLocations = favoriteLocations
+                FavoriteLocations = favoriteLocations,
+                CompletedBookings = Convert.ToInt32(dictionary["completedbookings"])
             };
 
             return history;
+        }
+
+        public async Task<IEnumerable<BookingSystem.Domain.DTOs.Booking.ActiveBookingDetailsDto>> GetActiveBookingsWithDetailsAsync()
+        {
+            return await _bookingRepository.GetActiveBookingsWithDetailsAsync();
         }
 
         private async Task<decimal> CalculateTotalPrice(CreateBookingDto dto)

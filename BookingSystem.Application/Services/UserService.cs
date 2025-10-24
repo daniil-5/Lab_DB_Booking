@@ -142,6 +142,18 @@ namespace BookingSystem.Application.Services
     
             return BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
         }
+
+        public async Task<IEnumerable<UserDto>> GetActiveUsersOrderedByRegistrationDateAsync()
+        {
+            var users = await _userRepository.GetActiveUsersOrderedByRegistrationDateAsync();
+            return users.Select(MapToDto).ToList();
+        }
+
+        public async Task<IEnumerable<UserDto>> GetUsersWithNoBookingsAsync()
+        {
+            var users = await _userRepository.GetUsersWithNoBookingsAsync();
+            return users.Select(MapToDto).ToList();
+        }
         
         private static UserDto MapToDto(User user)
         {
