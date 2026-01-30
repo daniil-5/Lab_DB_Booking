@@ -22,6 +22,7 @@ public class CachedUserService : IUserService
     // Cache expiration times
     private static readonly TimeSpan DefaultCacheExpiration = TimeSpan.FromMinutes(30);
     private static readonly TimeSpan SearchCacheExpiration = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan BlacklistUserCacheExpiration = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan AllUsersCacheExpiration = TimeSpan.FromMinutes(15);
 
     public CachedUserService(
@@ -244,7 +245,29 @@ public class CachedUserService : IUserService
 
     public async Task<bool> VerifyUserPasswordAsync(string email, string password)
     {
-        return await _userService.VerifyUserPasswordAsync(email, password);
+        var userBlacklistKey = $"auth:blacklist:{email}";
+        var userAttemptsKey = $"auth:attempts:{email}";
+        
+        if (await _cacheService.ExistsAsync(userBlacklistKey))
+        {
+            _logger.LogDebug("User with email {email} was found in cache", email);
+            return false;
+        }
+        
+        if (await _userService.VerifyUserPasswordAsync(email, password))
+        {
+            await _cacheService.RemoveAsync(userBlacklistKey);
+            return true;
+        }
+        
+        var counter = await _cacheService.IncrementAsync(userAttemptsKey);
+        if (counter >= 3)
+        {
+            await _cacheService.SetAsync(userBlacklistKey, "blocked", BlacklistUserCacheExpiration);
+            await _cacheService.RemoveAsync(userAttemptsKey);
+        }
+
+        return false;
     }
 
     public async Task<IEnumerable<UserDto>> GetActiveUsersOrderedByRegistrationDateAsync()

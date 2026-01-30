@@ -55,6 +55,18 @@ public class RedisCacheService : ICacheService
         }
     }
 
+    public async Task<long> IncrementAsync(string key, TimeSpan? expiration = null)
+    {
+        var db = _connectionMultiplexer.GetDatabase();
+        var newValue = await db.StringIncrementAsync(key);
+        if (newValue == 1 && expiration.HasValue)
+        {
+            await db.KeyExpireAsync(key, expiration.Value);
+        }
+
+        return newValue;
+    }
+
     public async Task RemoveAsync(string key)
     {
         try
