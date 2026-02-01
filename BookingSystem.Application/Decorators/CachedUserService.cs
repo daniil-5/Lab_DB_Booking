@@ -1,4 +1,5 @@
 using BookingSystem.Application.DTOs.User;
+using BookingSystem.Application.Exceptions;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -251,7 +252,11 @@ public class CachedUserService : IUserService
         if (await _cacheService.ExistsAsync(userBlacklistKey))
         {
             _logger.LogDebug("User with email {email} was found in cache", email);
-            return false;
+            
+            var ttl = await _cacheService.GetTtlAsync(userBlacklistKey);
+            var minutesLeft = ttl.HasValue ? Math.Ceiling(ttl.Value.TotalMinutes) : BlacklistUserCacheExpiration.Minutes;
+            
+            throw new AccountBannedException($"Too many failed attempts. Try again in {minutesLeft} minutes.");
         }
         
         if (await _userService.VerifyUserPasswordAsync(email, password))

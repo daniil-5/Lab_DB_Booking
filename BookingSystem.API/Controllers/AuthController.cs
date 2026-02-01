@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using BookingSystem.Application.DTOs;
 using BookingSystem.Application.DTOs.User;
+using BookingSystem.Application.Exceptions;
 using BookingSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -47,6 +48,10 @@ public class AuthController : ControllerBase
             // response.Token = null;
             
             return Ok(response);
+        }
+        catch (AccountBannedException ex)
+        {
+            return StatusCode(429, new { message = ex.Message });
         }
         catch (Exception ex)
         {
