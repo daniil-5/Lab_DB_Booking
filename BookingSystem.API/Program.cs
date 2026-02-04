@@ -20,6 +20,7 @@ using Microsoft.OpenApi.Models;
 using Npgsql;
 using Serilog;
 using BookingSystem.Domain.Enums;
+using Scalar.AspNetCore;
 using Serilog.Events;
 using StackExchange.Redis;
 
@@ -263,6 +264,13 @@ var app = builder.Build();
 // Enable Swagger always to simplify debugging
 app.UseSwagger();
 app.UseSwaggerUI();
+app.MapScalarApiReference(options =>
+{
+    options
+        .WithTitle("Hotel Booking API")
+        .WithDefaultHttpClient(ScalarTarget.Shell, ScalarClient.Curl)
+        .WithOpenApiRoutePattern("/swagger/v1/swagger.json");
+});
 
 // Log requests to see failing endpoints and status codes
 app.UseSerilogRequestLogging();
