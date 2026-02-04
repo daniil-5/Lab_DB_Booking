@@ -265,7 +265,7 @@ public class CachedUserService : IUserService
             return true;
         }
         
-        var counter = await _cacheService.IncrementAsync(userAttemptsKey);
+        var counter = await _cacheService.IncrementAsync(userAttemptsKey, BlacklistUserCacheExpiration);
         if (counter >= 3)
         {
             await _cacheService.SetAsync(userBlacklistKey, "blocked", BlacklistUserCacheExpiration);
