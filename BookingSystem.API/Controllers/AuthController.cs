@@ -51,11 +51,11 @@ public class AuthController : ControllerBase
         }
         catch (AccountBannedException ex)
         {
-            return StatusCode(429, new { message = ex.Message });
+            return StatusCode(429, ex.Message);
         }
         catch (Exception ex)
         {
-            return Unauthorized(ex.Message);
+            return StatusCode(401, ex.Message);
         }
     }
     

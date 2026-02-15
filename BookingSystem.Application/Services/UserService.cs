@@ -1,22 +1,23 @@
-using System.Linq.Expressions;
 using BookingSystem.Application.DTOs.User;
 using BookingSystem.Application.Interfaces;
-using BookingSystem.Application.Services;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Enums;
 using BookingSystem.Domain.Interfaces;
+using Microsoft.AspNetCore.Http;
 
 namespace BookingSystem.Application.Services
 {
     public class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
-        private readonly IUserActionAuditService _auditService;
+        private readonly ILoggingService _loggingService; 
+        private readonly IHttpContextAccessor _httpContextAccessor; 
 
-        public UserService(IUserRepository userRepository, IUserActionAuditService auditService)
+        public UserService(IUserRepository userRepository, ILoggingService loggingService, IHttpContextAccessor httpContextAccessor) // Changed constructor
         {
             _userRepository = userRepository;
-            _auditService = auditService;
+            _loggingService = loggingService;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<UserDto> CreateUserAsync(CreateUserDto userDto)
@@ -24,11 +25,23 @@ namespace BookingSystem.Application.Services
             // Check if user with same email or username already exists
             var existingEmail = await _userRepository.GetByEmailAsync(userDto.Email);
             if (existingEmail != null)
+            {
+                await _loggingService.LogErrorAsync(new ApplicationException("Email is already in use"), null,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new ApplicationException("Email is already in use");
+            }
 
             var existingUsername = await _userRepository.GetByEmailAsync(userDto.Username);
             if (existingUsername != null)
+            {
+                await _loggingService.LogErrorAsync(new ApplicationException("Username is already in use"), null,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new ApplicationException("Username is already in use");
+            }
 
             var user = new User
             {
@@ -42,7 +55,10 @@ namespace BookingSystem.Application.Services
             };
 
             await _userRepository.AddAsync(user);
-            await _auditService.AuditActionAsync(user.Id, UserActionType.UserCreated, true);
+            await _loggingService.LogActionAsync(user.Id, UserActionType.UserCreated, $"User {user.Username} created with ID {user.Id}.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
             return MapToDto(user);
         }
 
@@ -50,21 +66,39 @@ namespace BookingSystem.Application.Services
         {
             var existingUser = await _userRepository.GetByIdAsync(userDto.Id);
             if (existingUser == null)
+            {
+                await _loggingService.LogErrorAsync(new ApplicationException($"User with ID {userDto.Id} not found"), userDto.Id,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new ApplicationException($"User with ID {userDto.Id} not found");
+            }
 
             // Check if the updated email or username is already in use by another user
             if (userDto.Email != existingUser.Email)
             {
                 var existingEmail = await _userRepository.GetByEmailAsync(userDto.Email);
                 if (existingEmail != null && existingEmail.Id != userDto.Id)
+                {
+                    await _loggingService.LogErrorAsync(new ApplicationException("Email is already in use"), userDto.Id,
+                                                        _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                        _httpContextAccessor.HttpContext?.Request.Path,
+                                                        _httpContextAccessor.HttpContext?.Request.Method);
                     throw new ApplicationException("Email is already in use");
+                }
             }
 
             if (userDto.Username != existingUser.Username)
             {
                 var existingUsername = await _userRepository.GetByEmailAsync(userDto.Username);
                 if (existingUsername != null && existingUsername.Id != userDto.Id)
+                {
+                    await _loggingService.LogErrorAsync(new ApplicationException("Username is already in use"), userDto.Id,
+                                                        _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                        _httpContextAccessor.HttpContext?.Request.Path,
+                                                        _httpContextAccessor.HttpContext?.Request.Method);
                     throw new ApplicationException("Username is already in use");
+                }
             }
 
             existingUser.Username = userDto.Username;
@@ -76,7 +110,10 @@ namespace BookingSystem.Application.Services
             existingUser.UpdatedAt = DateTime.UtcNow;
 
             await _userRepository.UpdateAsync(existingUser);
-            await _auditService.AuditActionAsync(existingUser.Id, UserActionType.UserUpdated, true);
+            await _loggingService.LogActionAsync(existingUser.Id, UserActionType.UserUpdated, $"User {existingUser.Username} with ID {existingUser.Id} updated.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
             return MapToDto(existingUser);
         }
 
@@ -84,10 +121,19 @@ namespace BookingSystem.Application.Services
         {
             var existingUser = await _userRepository.GetByIdAsync(id);
             if (existingUser == null)
+            {
+                await _loggingService.LogErrorAsync(new ApplicationException($"User with ID {id} not found"), id,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new ApplicationException($"User with ID {id} not found");
+            }
 
             await _userRepository.DeleteAsync(id);
-            await _auditService.AuditActionAsync(id, UserActionType.UserDeleted, true);
+            await _loggingService.LogActionAsync(id, UserActionType.UserDeleted, $"User with ID {id} deleted.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
         }
 
         public async Task<UserDto> GetUserByIdAsync(int id)
@@ -119,19 +165,40 @@ namespace BookingSystem.Application.Services
         {
             var user = await _userRepository.GetByIdAsync(changePasswordDto.UserId);
             if (user == null)
+            {
+                await _loggingService.LogErrorAsync(new ApplicationException($"User with ID {changePasswordDto.UserId} not found"), changePasswordDto.UserId,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new ApplicationException($"User with ID {changePasswordDto.UserId} not found");
+            }
             
             if (!BCrypt.Net.BCrypt.Verify(changePasswordDto.CurrentPassword, user.PasswordHash))
+            {
+                await _loggingService.LogActionAsync(user.Id, UserActionType.Unknown, $"Password change failed for user {user.Username}: incorrect current password.",
+                                                      _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                      _httpContextAccessor.HttpContext?.Request.Path,
+                                                      _httpContextAccessor.HttpContext?.Request.Method);
                 return false; 
+            }
             
             if (changePasswordDto.NewPassword != changePasswordDto.ConfirmPassword)
+            {
+                await _loggingService.LogErrorAsync(new ApplicationException("New password and confirmation do not match"), user.Id,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new ApplicationException("New password and confirmation do not match");
+            }
             
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
             user.UpdatedAt = DateTime.UtcNow;
 
             await _userRepository.UpdateAsync(user);
-            await _auditService.AuditActionAsync(user.Id, UserActionType.ChangePassword, true);
+            await _loggingService.LogActionAsync(user.Id, UserActionType.ChangePassword, $"User {user.Username} changed password successfully.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
             return true;
         }
         

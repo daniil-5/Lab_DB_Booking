@@ -10,18 +10,18 @@ public class RoomTypeService : IRoomTypeService
     {
         private readonly IRepository<Domain.Entities.RoomType> _roomTypeRepository;
         private readonly IHotelRepository _hotelRepository;
-        private readonly IUserActionAuditService _auditService;
+        private readonly ILoggingService _loggingService; 
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public RoomTypeService(
             IRepository<Domain.Entities.RoomType> roomTypeRepository,
             IHotelRepository hotelRepository,
-            IUserActionAuditService auditService,
+            ILoggingService loggingService, 
             IHttpContextAccessor httpContextAccessor)
         {
             _roomTypeRepository = roomTypeRepository;
             _hotelRepository = hotelRepository;
-            _auditService = auditService;
+            _loggingService = loggingService; 
             _httpContextAccessor = httpContextAccessor;
         }
 
@@ -31,6 +31,10 @@ public class RoomTypeService : IRoomTypeService
             var hotel = await _hotelRepository.GetByIdAsync(roomTypeDto.HotelId);
             if (hotel == null)
             {
+                await _loggingService.LogErrorAsync(new KeyNotFoundException($"Hotel with ID {roomTypeDto.HotelId} not found."), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new KeyNotFoundException($"Hotel with ID {roomTypeDto.HotelId} not found.");
             }
 
@@ -48,7 +52,10 @@ public class RoomTypeService : IRoomTypeService
             await _roomTypeRepository.AddAsync(roomType);
 
             var userId = GetCurrentUserId();
-            await _auditService.AuditActionAsync(userId, UserActionType.RoomTypesCreated, true);
+            await _loggingService.LogActionAsync(userId, UserActionType.RoomTypesCreated, $"RoomType {roomType.Name} created with ID {roomType.Id} for Hotel {roomType.HotelId}.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
 
             return MapToDto(roomType);
         }
@@ -58,12 +65,20 @@ public class RoomTypeService : IRoomTypeService
             var hotel = await _hotelRepository.GetByIdAsync(roomTypeDto.HotelId);
             if (hotel == null)
             {
+                await _loggingService.LogErrorAsync(new KeyNotFoundException($"Hotel with ID {roomTypeDto.HotelId} not found."), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new KeyNotFoundException($"Hotel with ID {roomTypeDto.HotelId} not found.");
             }
             
             var existingRoomType = await _roomTypeRepository.GetByIdAsync(roomTypeDto.Id);
             if (existingRoomType == null)
             {
+                await _loggingService.LogErrorAsync(new KeyNotFoundException($"RoomType with ID {roomTypeDto.Id} not found."), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new KeyNotFoundException($"RoomType with ID {roomTypeDto.Id} not found.");
             }
             
@@ -77,7 +92,10 @@ public class RoomTypeService : IRoomTypeService
             await _roomTypeRepository.UpdateAsync(existingRoomType);
 
             var userId = GetCurrentUserId();
-            await _auditService.AuditActionAsync(userId, UserActionType.RoomTypesUpdated, true);
+            await _loggingService.LogActionAsync(userId, UserActionType.RoomTypesUpdated, $"RoomType {existingRoomType.Name} with ID {existingRoomType.Id} updated.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
 
             return MapToDto(existingRoomType);
         }
@@ -87,6 +105,10 @@ public class RoomTypeService : IRoomTypeService
             var roomType = await _roomTypeRepository.GetByIdAsync(id);
             if (roomType == null)
             {
+                await _loggingService.LogErrorAsync(new KeyNotFoundException($"RoomType with ID {id} not found."), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new KeyNotFoundException($"RoomType with ID {id} not found.");
             }
             
@@ -94,7 +116,10 @@ public class RoomTypeService : IRoomTypeService
             await _roomTypeRepository.DeleteAsync(id);
 
             var userId = GetCurrentUserId();
-            await _auditService.AuditActionAsync(userId, UserActionType.RoomTypesDeleted, true);
+            await _loggingService.LogActionAsync(userId, UserActionType.RoomTypesDeleted, $"RoomType with ID {id} deleted.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
         }
 
         public async Task<RoomTypeDto> GetRoomTypeByIdAsync(int id)
@@ -120,6 +145,10 @@ public class RoomTypeService : IRoomTypeService
             var hotel = await _hotelRepository.GetByIdAsync(hotelId);
             if (hotel == null)
             {
+                await _loggingService.LogErrorAsync(new KeyNotFoundException($"Hotel with ID {hotelId} not found."), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new KeyNotFoundException($"Hotel with ID {hotelId} not found.");
             }
         
@@ -151,6 +180,6 @@ public class RoomTypeService : IRoomTypeService
             {
                 return userId;
             }
-            throw new InvalidOperationException("User ID not found in token");
+            return -1; // Or throw an exception if user ID is always expected
         }
     }

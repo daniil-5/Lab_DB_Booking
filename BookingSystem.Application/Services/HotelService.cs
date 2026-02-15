@@ -13,13 +13,13 @@ namespace BookingSystem.Application.Services;
 public class HotelService : IHotelService
 {
     private readonly IHotelRepository _hotelRepository;
-    private readonly IUserActionAuditService _auditService;
+    private readonly ILoggingService _loggingService;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public HotelService(IHotelRepository hotelRepository, IUserActionAuditService auditService, IHttpContextAccessor httpContextAccessor)
+    public HotelService(IHotelRepository hotelRepository, ILoggingService loggingService, IHttpContextAccessor httpContextAccessor) // Changed constructor
     {
         _hotelRepository = hotelRepository;
-        _auditService = auditService;
+        _loggingService = loggingService;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -38,7 +38,10 @@ public class HotelService : IHotelService
         await _hotelRepository.AddAsync(hotel);
 
         var userId = GetCurrentUserId();
-        await _auditService.AuditActionAsync(userId, UserActionType.HotelCreated, true);
+        await _loggingService.LogActionAsync(userId, UserActionType.HotelCreated, $"Hotel {hotel.Name} created with ID {hotel.Id}.",
+                                              _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                              _httpContextAccessor.HttpContext?.Request.Path,
+                                              _httpContextAccessor.HttpContext?.Request.Method);
 
         return MapToDto(hotel);
     }
@@ -48,6 +51,10 @@ public class HotelService : IHotelService
         var existingHotel = await _hotelRepository.GetByIdAsync(hotelDto.Id);
         if (existingHotel == null)
         {
+            await _loggingService.LogErrorAsync(new KeyNotFoundException($"Hotel with ID {hotelDto.Id} not found"), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
             throw new KeyNotFoundException($"Hotel with ID {hotelDto.Id} not found");
         }
 
@@ -62,7 +69,10 @@ public class HotelService : IHotelService
         await _hotelRepository.UpdateAsync(existingHotel);
 
         var userId = GetCurrentUserId();
-        await _auditService.AuditActionAsync(userId, UserActionType.HotelUpdated, true);
+        await _loggingService.LogActionAsync(userId, UserActionType.HotelUpdated, $"Hotel {existingHotel.Name} with ID {existingHotel.Id} updated.",
+                                              _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                              _httpContextAccessor.HttpContext?.Request.Path,
+                                              _httpContextAccessor.HttpContext?.Request.Method);
 
         return MapToDto(existingHotel);
     }
@@ -72,13 +82,20 @@ public class HotelService : IHotelService
         var hotel = await _hotelRepository.GetByIdAsync(id);
         if (hotel == null)
         {
+            await _loggingService.LogErrorAsync(new KeyNotFoundException($"Hotel with ID {id} not found"), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
             throw new KeyNotFoundException($"Hotel with ID {id} not found");
         }
 
         await _hotelRepository.DeleteAsync(id);
 
         var userId = GetCurrentUserId();
-        await _auditService.AuditActionAsync(userId, UserActionType.HotelDeleted, true);
+        await _loggingService.LogActionAsync(userId, UserActionType.HotelDeleted, $"Hotel with ID {id} deleted.",
+                                              _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                              _httpContextAccessor.HttpContext?.Request.Path,
+                                              _httpContextAccessor.HttpContext?.Request.Method);
     }
 
     public async Task<HotelDto> GetHotelByIdAsync(int id)
@@ -99,16 +116,13 @@ public class HotelService : IHotelService
     public async Task<HotelSearchResultDto> SearchHotelsAsync(HotelSearchDto searchDto)
     {
         var (hotels, totalCount) = await _hotelRepository.SearchHotelsAsync(null, null, searchDto.PageNumber, searchDto.PageSize);
-
-        // Calculate pagination values
+        
         var totalPages = (int)Math.Ceiling(totalCount / (double)searchDto.PageSize);
         var hasPrevious = searchDto.PageNumber > 1;
         var hasNext = searchDto.PageNumber < totalPages;
-
-        // Map results to DTOs
+        
         var hotelDtos = hotels.Select(MapToDto).ToList();
-
-        // Create and return the search result DTO
+        
         return new HotelSearchResultDto
         {
             Hotels = hotelDtos,
@@ -134,13 +148,11 @@ public class HotelService : IHotelService
 
             CreatedAt = hotel.CreatedAt,
             UpdatedAt = hotel.UpdatedAt,
-
-            // Map RoomTypes (keeping as domain entities as defined in your DTO)
+            
             RoomTypes = hotel.RoomTypes?
                 .Where(rt => !rt.IsDeleted)
                 .ToList() ?? new List<Domain.Entities.RoomType>(),
-
-            // Map Photos
+            
             Photos = hotel.Photos?
                 .Where(p => !p.IsDeleted)
                 .Select(p => new HotelPhotoDto
@@ -163,7 +175,7 @@ public class HotelService : IHotelService
         {
             return userId;
         }
-        throw new InvalidOperationException("User ID not found in token");
+        return -1; 
     }
     public async Task<IEnumerable<HotelStatistics>> GetHotelsStatisticsAsync()
     {
@@ -192,11 +204,19 @@ public class HotelService : IHotelService
     {
         if (checkOut <= checkIn)
         {
+            await _loggingService.LogErrorAsync(new ArgumentException("Check-out date must be after check-in date"), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
             throw new ArgumentException("Check-out date must be after check-in date");
         }
     
         if (guestCount <= 0)
         {
+            await _loggingService.LogErrorAsync(new ArgumentException("Guest count must be greater than zero"), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
             throw new ArgumentException("Guest count must be greater than zero");
         }
     
@@ -243,6 +263,10 @@ public class HotelService : IHotelService
         
         if (domainReport == null)
         {
+            await _loggingService.LogErrorAsync(new KeyNotFoundException($"Hotel with ID {hotelId} not found"), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
             throw new KeyNotFoundException($"Hotel with ID {hotelId} not found");
         }
 
@@ -280,6 +304,10 @@ public class HotelService : IHotelService
     {
         if (months <= 0 || months > 24)
         {
+            await _loggingService.LogErrorAsync(new ArgumentException("Months must be between 1 and 24"), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
             throw new ArgumentException("Months must be between 1 and 24");
         }
     

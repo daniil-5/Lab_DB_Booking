@@ -3,6 +3,7 @@ using BookingSystem.Application.DTOs.User;
 using BookingSystem.Application.Interfaces;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Domain.Enums;
+using Microsoft.AspNetCore.Http; // Added for HttpContextAccessor
 
 namespace BookingSystem.Application.Services;
 
@@ -10,23 +11,29 @@ public class AuthService : IAuthService
 {
     private readonly IJwtService _jwtService;
     private readonly IUserService _userService;
-    private readonly IUserActionAuditService _auditService;
+    private readonly ILoggingService _loggingService; 
+    private readonly IHttpContextAccessor _httpContextAccessor; 
 
-    public AuthService(IJwtService jwtService, IUserService userService, IUserActionAuditService auditService)
+    public AuthService(IJwtService jwtService, IUserService userService, ILoggingService loggingService, IHttpContextAccessor httpContextAccessor) // Changed constructor
     {
         _jwtService = jwtService;
         _userService = userService;
-        _auditService = auditService;
+        _loggingService = loggingService; 
+        _httpContextAccessor = httpContextAccessor;
     }
 
-        public async Task<AuthResponse> Register(RegisterUserDto registerDto)
+    public async Task<AuthResponse> Register(RegisterUserDto registerDto)
     {
-        // Check if user already exists using UserService
         var existingUser = await _userService.GetUserByEmailAsync(registerDto.Email);
         if (existingUser != null)
+        {
+            await _loggingService.LogActionAsync(null, UserActionType.Unknown, $"Registration failed: User with email {registerDto.Email} already exists.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
             throw new Exception("User already exists");
-
-        // Create user through UserService
+        }
+        
         var createUserDto = new CreateUserDto
         {
             Username = registerDto.Username,
@@ -39,8 +46,11 @@ public class AuthService : IAuthService
         };
         var userDto = await _userService.CreateUserAsync(createUserDto);
 
-        // Create JWT token
-        // Since JWT service likely expects a User entity, create one from the DTO
+        await _loggingService.LogActionAsync(userDto.Id, UserActionType.UserCreated, $"User {userDto.Username} registered successfully.",
+                                              _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                              _httpContextAccessor.HttpContext?.Request.Path,
+                                              _httpContextAccessor.HttpContext?.Request.Method);
+        
         var userForToken = new User
         {
             Id = userDto.Id,
@@ -61,18 +71,31 @@ public class AuthService : IAuthService
     }
     public async Task<AuthResponse> Login(LoginDto loginDto)
     {
-        // Verify user credentials using the password verification method
         var isPasswordValid = await _userService.VerifyUserPasswordAsync(loginDto.Email, loginDto.Password);
         if (!isPasswordValid)
+        {
+            await _loggingService.LogActionAsync(null, UserActionType.Unknown, $"Login failed: Invalid credentials for email {loginDto.Email}.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
             throw new Exception("Invalid credentials");
+        }
         
-        // If password is valid, get the user details
         var userDto = await _userService.GetUserByEmailAsync(loginDto.Email);
-        if (userDto == null) // This shouldn't happen if password verification succeeded
+        if (userDto == null) 
+        {
+            await _loggingService.LogActionAsync(null, UserActionType.Unknown, $"Login failed: User not found after successful password verification for email {loginDto.Email}.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
             throw new Exception("Invalid credentials");
+        }
 
-        await _auditService.AuditActionAsync(userDto.Id, UserActionType.UserLogin, true);
-        
+        await _loggingService.LogActionAsync(userDto.Id, UserActionType.UserLogin, $"User {userDto.Username} logged in successfully.",
+                                              _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                              _httpContextAccessor.HttpContext?.Request.Path,
+                                              _httpContextAccessor.HttpContext?.Request.Method);
+
         // Create JWT token
         var userForToken = new User
         {
@@ -83,7 +106,7 @@ public class AuthService : IAuthService
             LastName = userDto.LastName,
             Role = Enum.Parse<UserRole>(userDto.Role).GetHashCode()
         };
-        
+
         return new AuthResponse
         {
             Id = userDto.Id,
@@ -92,7 +115,7 @@ public class AuthService : IAuthService
             Token = _jwtService.GenerateToken(userForToken)
         };
     }
-    
+
     public async Task<UserDto> GetUserById(int userId)
     {
         return await _userService.GetUserByIdAsync(userId);
@@ -100,6 +123,9 @@ public class AuthService : IAuthService
 
     public async Task Logout(int userId)
     {
-        await _auditService.AuditActionAsync(userId, UserActionType.UserLogout, true);
+        await _loggingService.LogActionAsync(userId, UserActionType.UserLogout, $"User {userId} logged out.",
+                                              _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                              _httpContextAccessor.HttpContext?.Request.Path,
+                                              _httpContextAccessor.HttpContext?.Request.Method);
     }
 }

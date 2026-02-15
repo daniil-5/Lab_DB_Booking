@@ -5,29 +5,33 @@ using BookingSystem.Domain.Enums;
 using BookingSystem.Domain.Interfaces;
 using BookingSystem.Application.DTOs.User;
 using BookingSystem.Domain.DTOs.Booking;
+using Microsoft.AspNetCore.Http; // Added for HttpContextAccessor
 
 namespace BookingSystem.Application.Services
 {
     public class BookingService : IBookingService
     {
         private readonly IBookingRepository _bookingRepository;
-        private readonly IRepository<Domain.Entities.RoomType> _roomTypeRepository;
+        private readonly IRepository<RoomType> _roomTypeRepository;
         private readonly IHotelRepository _hotelRepository;
         private readonly IRepository<RoomPricing> _pricingRepository;
-        private readonly IUserActionAuditService _auditService;
+        private readonly ILoggingService _loggingService; 
+        private readonly IHttpContextAccessor _httpContextAccessor; 
 
         public BookingService(
             IBookingRepository bookingRepository,
-            IRepository<Domain.Entities.RoomType> roomTypeRepository,
+            IRepository<RoomType> roomTypeRepository,
             IHotelRepository hotelRepository,
             IRepository<RoomPricing> pricingRepository,
-            IUserActionAuditService auditService)
+            ILoggingService loggingService, 
+            IHttpContextAccessor httpContextAccessor)
         {
             _bookingRepository = bookingRepository;
             _roomTypeRepository = roomTypeRepository;
             _hotelRepository = hotelRepository;
             _pricingRepository = pricingRepository;
-            _auditService = auditService;
+            _loggingService = loggingService; 
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<BookingResponseDto> GetBookingByIdAsync(int id)
@@ -49,6 +53,10 @@ namespace BookingSystem.Application.Services
             // Validate dates
             if (bookingDto.CheckInDate >= bookingDto.CheckOutDate)
             {
+                await _loggingService.LogErrorAsync(new ArgumentException("Check-out date must be after check-in date"), bookingDto.UserId,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new ArgumentException("Check-out date must be after check-in date");
             }
 
@@ -56,6 +64,10 @@ namespace BookingSystem.Application.Services
             var hotel = await _hotelRepository.GetByIdAsync(bookingDto.HotelId);
             if (hotel == null)
             {
+                await _loggingService.LogErrorAsync(new KeyNotFoundException($"Hotel with ID {bookingDto.HotelId} not found"), bookingDto.UserId,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new KeyNotFoundException($"Hotel with ID {bookingDto.HotelId} not found");
             }
 
@@ -63,12 +75,20 @@ namespace BookingSystem.Application.Services
             var roomType = await _roomTypeRepository.GetByIdAsync(bookingDto.RoomTypeId);
             if (roomType == null || roomType.HotelId != bookingDto.HotelId)
             {
+                await _loggingService.LogErrorAsync(new KeyNotFoundException($"Room type with ID {bookingDto.RoomTypeId} not found in hotel {bookingDto.HotelId}"), bookingDto.UserId,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new KeyNotFoundException($"Room type with ID {bookingDto.RoomTypeId} not found in hotel {bookingDto.HotelId}");
             }
 
             // Check if the number of guests is within the room type capacity
             if (bookingDto.GuestCount > roomType.Capacity)
             {
+                await _loggingService.LogErrorAsync(new InvalidOperationException($"This room type can only accommodate {roomType.Capacity} guests"), bookingDto.UserId,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new InvalidOperationException($"This room type can only accommodate {roomType.Capacity} guests");
             }
 
@@ -81,6 +101,10 @@ namespace BookingSystem.Application.Services
                 
             if (!isAvailable)
             {
+                await _loggingService.LogErrorAsync(new InvalidOperationException("The selected room type is not available for the requested dates"), bookingDto.UserId,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new InvalidOperationException("The selected room type is not available for the requested dates");
             }
 
@@ -102,15 +126,25 @@ namespace BookingSystem.Application.Services
             };
 
             await _bookingRepository.AddAsync(booking);
-            await _auditService.AuditActionAsync(booking.UserId, UserActionType.BookingCreated, true);
+            await _loggingService.LogActionAsync(booking.UserId, UserActionType.BookingCreated, $"Booking {booking.Id} created successfully.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
             
             return MapToDto(booking);
         }
 
         public async Task<BookingResponseDto> UpdateBookingAsync(UpdateBookingDto dto)
         {
-            var booking = await _bookingRepository.GetByIdAsync(dto.Id) 
-                ?? throw new KeyNotFoundException("Booking not found");
+            var booking = await _bookingRepository.GetByIdAsync(dto.Id);
+            if (booking == null)
+            {
+                await _loggingService.LogErrorAsync(new KeyNotFoundException("Booking not found"), null, // UserId might not be available here
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
+                throw new KeyNotFoundException("Booking not found");
+            }
 
             // If dates changed, recalculate total price and check availability
             if (booking.CheckInDate != dto.CheckInDate ||
@@ -119,6 +153,10 @@ namespace BookingSystem.Application.Services
                 // Validate new dates
                 if (dto.CheckInDate >= dto.CheckOutDate)
                 {
+                    await _loggingService.LogErrorAsync(new ArgumentException("Check-out date must be after check-in date"), booking.UserId,
+                                                        _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                        _httpContextAccessor.HttpContext?.Request.Path,
+                                                        _httpContextAccessor.HttpContext?.Request.Method);
                     throw new ArgumentException("Check-out date must be after check-in date");
                 }
 
@@ -132,6 +170,10 @@ namespace BookingSystem.Application.Services
 
                 if (!isAvailable)
                 {
+                    await _loggingService.LogErrorAsync(new InvalidOperationException("The room type is not available for the selected dates"), booking.UserId,
+                                                        _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                        _httpContextAccessor.HttpContext?.Request.Path,
+                                                        _httpContextAccessor.HttpContext?.Request.Method);
                     throw new InvalidOperationException("The room type is not available for the selected dates");
                 }
 
@@ -152,6 +194,10 @@ namespace BookingSystem.Application.Services
                 var roomType = await _roomTypeRepository.GetByIdAsync(booking.RoomTypeId);
                 if (dto.GuestCount > roomType.Capacity)
                 {
+                    await _loggingService.LogErrorAsync(new InvalidOperationException($"This room type can only accommodate {roomType.Capacity} guests"), booking.UserId,
+                                                        _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                        _httpContextAccessor.HttpContext?.Request.Path,
+                                                        _httpContextAccessor.HttpContext?.Request.Method);
                     throw new InvalidOperationException($"This room type can only accommodate {roomType.Capacity} guests");
                 }
             }
@@ -161,7 +207,10 @@ namespace BookingSystem.Application.Services
             booking.GuestCount = dto.GuestCount;
             booking.Status = dto.Status;
             await _bookingRepository.UpdateAsync(booking);
-            await _auditService.AuditActionAsync(booking.UserId, UserActionType.BookingUpdated, true);
+            await _loggingService.LogActionAsync(booking.UserId, UserActionType.BookingUpdated, $"Booking {booking.Id} updated successfully.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
             
             return MapToDto(booking);
         }
@@ -171,11 +220,18 @@ namespace BookingSystem.Application.Services
             var booking = await _bookingRepository.GetByIdAsync(id);
             if (booking == null)
             {
+                await _loggingService.LogErrorAsync(new KeyNotFoundException($"Booking with ID {id} not found"), null,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new KeyNotFoundException($"Booking with ID {id} not found");
             }
 
             await _bookingRepository.DeleteAsync(id);
-            await _auditService.AuditActionAsync(booking.UserId, UserActionType.BookingDeleted, true);
+            await _loggingService.LogActionAsync(booking.UserId, UserActionType.BookingDeleted, $"Booking {booking.Id} deleted successfully.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
         }
 
         // public async Task<IEnumerable<BookingResponseDto>> GetBookingsByUserIdAsync(int userId)
@@ -200,6 +256,10 @@ namespace BookingSystem.Application.Services
             }
             catch (Exception ex)
             {
+                await _loggingService.LogErrorAsync(ex, userId,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 // Fallback with no includes if error occurs
                 Console.WriteLine($"Error in GetBookingsByUserIdAsync: {ex.Message}");
                 var bookings = await _bookingRepository.GetAllAsync(
@@ -232,6 +292,10 @@ namespace BookingSystem.Application.Services
             var roomType = await _roomTypeRepository.GetByIdAsync(roomTypeId);
             if (roomType == null || roomType.HotelId != hotelId)
             {
+                await _loggingService.LogErrorAsync(new KeyNotFoundException($"Room type with ID {roomTypeId} not found in hotel {hotelId}"), null,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new KeyNotFoundException($"Room type with ID {roomTypeId} not found in hotel {hotelId}");
             }
 
@@ -242,13 +306,25 @@ namespace BookingSystem.Application.Services
 
         public async Task<BookingResponseDto> CancelBookingAsync(int id)
         {
-            var booking = await _bookingRepository.GetByIdAsync(id)
-                ?? throw new KeyNotFoundException("Booking not found");
+            var booking = await _bookingRepository.GetByIdAsync(id);
+            if (booking == null)
+            {
+                await _loggingService.LogErrorAsync(new KeyNotFoundException("Booking not found"), null,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
+                throw new KeyNotFoundException("Booking not found");
+            }
 
             booking.Status = (int)BookingStatus.Cancelled;
             booking.UpdatedAt = DateTime.UtcNow;
             
             await _bookingRepository.UpdateAsync(booking);
+
+            await _loggingService.LogActionAsync(booking.UserId, UserActionType.BookingUpdated, $"Booking {booking.Id} cancelled successfully.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
             
             return MapToDto(booking);
         }
@@ -264,15 +340,32 @@ namespace BookingSystem.Application.Services
         public async Task<BookingResponseDto> UpdateBookingStatusAsync(int id, int statusCode)
         {
             if (!Enum.IsDefined(typeof(BookingStatus), statusCode))
+            {
+                await _loggingService.LogErrorAsync(new ArgumentException("Invalid booking status code"), null,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
                 throw new ArgumentException("Invalid booking status code");
+            }
 
-            var booking = await _bookingRepository.GetByIdAsync(id)
-                ?? throw new KeyNotFoundException("Booking not found");
+            var booking = await _bookingRepository.GetByIdAsync(id);
+            if (booking == null)
+            {
+                await _loggingService.LogErrorAsync(new KeyNotFoundException("Booking not found"), null,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
+                throw new KeyNotFoundException("Booking not found");
+            }
 
             booking.Status = statusCode;
             booking.UpdatedAt = DateTime.UtcNow;
 
             await _bookingRepository.UpdateAsync(booking);
+            await _loggingService.LogActionAsync(booking.UserId, UserActionType.BookingUpdated, $"Booking {booking.Id} status updated to {((BookingStatus)statusCode).ToString()}.",
+                                                  _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                  _httpContextAccessor.HttpContext?.Request.Path,
+                                                  _httpContextAccessor.HttpContext?.Request.Method);
             return MapToDto(booking);
         }
 
@@ -299,66 +392,77 @@ namespace BookingSystem.Application.Services
 
         public async Task<UserBookingHistory> GetUserBookingHistoryAsync(int userId)
         {
-            var result = await _bookingRepository.GetUserBookingHistoryAsync(userId);
-            if (result == null)
-                return null;
-
-            var dictionary = (IDictionary<string, object>)result;
-
-            var recentBookingsRaw = dictionary.ContainsKey("recentbookings") ? dictionary["recentbookings"] : null;
-            var recentBookings = (recentBookingsRaw as IEnumerable<dynamic>)
-                ?.Where(b => b != null) // Filter out null bookings
-                .Select(b =>
-                {
-                    var bDict = (IDictionary<string, object>)b;
-                    return new UserRecentBooking
-                    {
-                        BookingId = (int)bDict["bookingid"],
-                        CheckInDate = (DateTime)bDict["checkindate"],
-                        CheckOutDate = (DateTime)bDict["checkoutdate"],
-                        Status = (int)bDict["status"],
-                        TotalPrice = (decimal)bDict["totalprice"],
-                        HotelName = (string)bDict["hotelname"],
-                        Location = (string)bDict["location"],
-                        RoomTypeName = (string)bDict["roomtypename"]
-                    };
-                }).ToList() ?? new List<UserRecentBooking>();
-
-            var favoriteLocationsRaw = dictionary.ContainsKey("favoritelocations") ? dictionary["favoritelocations"] : null;
-            var favoriteLocations = (favoriteLocationsRaw as IEnumerable<dynamic>)
-                ?.Where(l => l != null) // Filter out null locations
-                .Select(l =>
-                {
-                    var lDict = (IDictionary<string, object>)l;
-                    return new LocationStatistic
-                    {
-                        Location = (string)lDict["location"],
-                        BookingCount = Convert.ToInt32(lDict["bookingcount"]),
-                        TotalSpent = (decimal)lDict["totalspent"]
-                    };
-                }).ToList() ?? new List<LocationStatistic>();
-
-            var history = new UserBookingHistory
+            try
             {
-                UserId = (int)dictionary["userid"],
-                Username = (string)dictionary["username"],
-                Email = (string)dictionary["email"],
-                FullName = (string)dictionary["fullname"],
-                TotalBookings = Convert.ToInt32(dictionary["totalbookings"]),
-                ConfirmedBookings = Convert.ToInt32(dictionary["completedbookings"]),
-                CancelledBookings = Convert.ToInt32(dictionary["cancelledbookings"]),
-                TotalSpent = (decimal)dictionary["totalspent"],
-                MemberSince = (DateTime)dictionary["firstbookingdate"],
-                AverageBookingValue = (decimal)dictionary["averagebookingvalue"],
-                FirstBookingDate = (DateTime?)dictionary["firstbookingdate"],
-                LastBookingDate = (DateTime?)dictionary["lastbookingdate"],
-                UniqueHotelsVisited = Convert.ToInt32(dictionary["uniquehotelsvisited"]),
-                RecentBookings = recentBookings,
-                FavoriteLocations = favoriteLocations,
-                CompletedBookings = Convert.ToInt32(dictionary["completedbookings"])
-            };
+                var result = await _bookingRepository.GetUserBookingHistoryAsync(userId);
+                if (result == null)
+                    return null;
 
-            return history;
+                var dictionary = (IDictionary<string, object>)result;
+
+                var recentBookingsRaw = dictionary.ContainsKey("recentbookings") ? dictionary["recentbookings"] : null;
+                var recentBookings = (recentBookingsRaw as IEnumerable<dynamic>)
+                    ?.Where(b => b != null) // Filter out null bookings
+                    .Select(b =>
+                    {
+                        var bDict = (IDictionary<string, object>)b;
+                        return new UserRecentBooking
+                        {
+                            BookingId = (int)bDict["bookingid"],
+                            CheckInDate = (DateTime)bDict["checkindate"],
+                            CheckOutDate = (DateTime)bDict["checkoutdate"],
+                            Status = (int)bDict["status"],
+                            TotalPrice = (decimal)bDict["totalprice"],
+                            HotelName = (string)bDict["hotelname"],
+                            Location = (string)bDict["location"],
+                            RoomTypeName = (string)bDict["roomtypename"]
+                        };
+                    }).ToList() ?? new List<UserRecentBooking>();
+
+                var favoriteLocationsRaw = dictionary.ContainsKey("favoritelocations") ? dictionary["favoritelocations"] : null;
+                var favoriteLocations = (favoriteLocationsRaw as IEnumerable<dynamic>)
+                    ?.Where(l => l != null) // Filter out null locations
+                    .Select(l =>
+                    {
+                        var lDict = (IDictionary<string, object>)l;
+                        return new LocationStatistic
+                        {
+                            Location = (string)lDict["location"],
+                            BookingCount = Convert.ToInt32(lDict["bookingcount"]),
+                            TotalSpent = (decimal)lDict["totalspent"]
+                        };
+                    }).ToList() ?? new List<LocationStatistic>();
+
+                var history = new UserBookingHistory
+                {
+                    UserId = (int)dictionary["userid"],
+                    Username = (string)dictionary["username"],
+                    Email = (string)dictionary["email"],
+                    FullName = (string)dictionary["fullname"],
+                    TotalBookings = Convert.ToInt32(dictionary["totalbookings"]),
+                    ConfirmedBookings = Convert.ToInt32(dictionary["completedbookings"]),
+                    CancelledBookings = Convert.ToInt32(dictionary["cancelledbookings"]),
+                    TotalSpent = (decimal)dictionary["totalspent"],
+                    MemberSince = (DateTime)dictionary["firstbookingdate"],
+                    AverageBookingValue = (decimal)dictionary["averagebookingvalue"],
+                    FirstBookingDate = (DateTime?)dictionary["firstbookingdate"],
+                    LastBookingDate = (DateTime?)dictionary["lastbookingdate"],
+                    UniqueHotelsVisited = Convert.ToInt32(dictionary["uniquehotelsvisited"]),
+                    RecentBookings = recentBookings,
+                    FavoriteLocations = favoriteLocations,
+                    CompletedBookings = Convert.ToInt32(dictionary["completedbookings"])
+                };
+
+                return history;
+            }
+            catch (Exception ex)
+            {
+                await _loggingService.LogErrorAsync(ex, userId,
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
+                throw;
+            }
         }
 
         public async Task<IEnumerable<BookingSystem.Domain.DTOs.Booking.ActiveBookingDetailsDto>> GetActiveBookingsWithDetailsAsync()

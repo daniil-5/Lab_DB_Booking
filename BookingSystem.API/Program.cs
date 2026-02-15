@@ -89,6 +89,7 @@ builder.Services.AddSwaggerGen(c =>
 #region Authentication and Infrastructure
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 
@@ -107,6 +108,11 @@ builder.Services.AddSingleton(dataSource);
 
 builder.Services.AddSingleton(new DapperDbContext(dataSource));
 
+#endregion
+
+#region MongoDB Logging
+builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
+builder.Services.AddSingleton<ILogRepository, MongoLogRepository>();
 #endregion
 
 #region Redis and Cache
@@ -175,6 +181,7 @@ builder.Services.AddScoped<IUserService>(provider =>
 builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();
 builder.Services.AddScoped<IRoomPricingService, RoomPricingService>();
 builder.Services.AddScoped<IUserActionAuditService, UserActionAuditService>();
+builder.Services.AddScoped<ILoggingService, LoggingService>();
 
 
 #endregion

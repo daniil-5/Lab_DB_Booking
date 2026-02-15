@@ -10,13 +10,13 @@ namespace BookingSystem.Application.Services;
 public class RoomPricingService : IRoomPricingService
 {
     private readonly IRepository<RoomPricing> _roomPricingRepository;
-    private readonly IUserActionAuditService _auditService;
+    private readonly ILoggingService _loggingService;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public RoomPricingService(IRepository<RoomPricing> roomPricingRepository, IUserActionAuditService auditService, IHttpContextAccessor httpContextAccessor)
+    public RoomPricingService(IRepository<RoomPricing> roomPricingRepository, ILoggingService loggingService, IHttpContextAccessor httpContextAccessor)
     {
         _roomPricingRepository = roomPricingRepository;
-        _auditService = auditService;
+        _loggingService = loggingService;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -32,7 +32,10 @@ public class RoomPricingService : IRoomPricingService
         await _roomPricingRepository.AddAsync(roomPricing);
 
         var userId = GetCurrentUserId();
-        await _auditService.AuditActionAsync(userId, UserActionType.RoomPricingsCreated, true);
+        await _loggingService.LogActionAsync(userId, UserActionType.RoomPricingsCreated, $"Room pricing created for RoomType {roomPricing.RoomTypeId} on {roomPricing.Date} with price {roomPricing.Price}.",
+                                              _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                              _httpContextAccessor.HttpContext?.Request.Path,
+                                              _httpContextAccessor.HttpContext?.Request.Method);
 
         return MapToDto(roomPricing);
     }
@@ -40,6 +43,14 @@ public class RoomPricingService : IRoomPricingService
     public async Task<RoomPricingDto> UpdateRoomPricingAsync(UpdateRoomPricingDto pricingDto)
     {
         var existingPricing = await _roomPricingRepository.GetByIdAsync(pricingDto.Id);
+        if (existingPricing == null)
+        {
+            await _loggingService.LogErrorAsync(new KeyNotFoundException($"RoomPricing with ID {pricingDto.Id} not found."), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
+            throw new KeyNotFoundException($"RoomPricing with ID {pricingDto.Id} not found.");
+        }
 
         existingPricing.RoomTypeId = pricingDto.RoomTypeId;
         existingPricing.Date = pricingDto.Date;
@@ -48,17 +59,33 @@ public class RoomPricingService : IRoomPricingService
         await _roomPricingRepository.UpdateAsync(existingPricing);
 
         var userId = GetCurrentUserId();
-        await _auditService.AuditActionAsync(userId, UserActionType.RoomPricingsUpdated, true);
+        await _loggingService.LogActionAsync(userId, UserActionType.RoomPricingsUpdated, $"Room pricing with ID {existingPricing.Id} updated.",
+                                              _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                              _httpContextAccessor.HttpContext?.Request.Path,
+                                              _httpContextAccessor.HttpContext?.Request.Method);
 
         return MapToDto(existingPricing);
     }
 
     public async Task DeleteRoomPricingAsync(int id)
     {
+        var existingPricing = await _roomPricingRepository.GetByIdAsync(id);
+        if (existingPricing == null)
+        {
+            await _loggingService.LogErrorAsync(new KeyNotFoundException($"RoomPricing with ID {id} not found."), GetCurrentUserId(),
+                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                                    _httpContextAccessor.HttpContext?.Request.Path,
+                                                    _httpContextAccessor.HttpContext?.Request.Method);
+            throw new KeyNotFoundException($"RoomPricing with ID {id} not found.");
+        }
+
         await _roomPricingRepository.DeleteAsync(id);
 
         var userId = GetCurrentUserId();
-        await _auditService.AuditActionAsync(userId, UserActionType.RoomPricingsDeleted, true);
+        await _loggingService.LogActionAsync(userId, UserActionType.RoomPricingsDeleted, $"Room pricing with ID {id} deleted.",
+                                              _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                                              _httpContextAccessor.HttpContext?.Request.Path,
+                                              _httpContextAccessor.HttpContext?.Request.Method);
     }
 
     public async Task<RoomPricingDto> GetRoomPricingByIdAsync(int id)
@@ -93,6 +120,6 @@ public class RoomPricingService : IRoomPricingService
         {
             return userId;
         }
-        throw new InvalidOperationException("User ID not found in token");
+        return -1;
     }
 }
