@@ -182,6 +182,7 @@ builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();
 builder.Services.AddScoped<IRoomPricingService, RoomPricingService>();
 builder.Services.AddScoped<IUserActionAuditService, UserActionAuditService>();
 builder.Services.AddScoped<ILoggingService, LoggingService>();
+builder.Services.AddScoped<IReportingService, ReportingService>();
 
 
 #endregion
