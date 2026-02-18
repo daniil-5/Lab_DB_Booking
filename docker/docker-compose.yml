@@ -23,6 +23,19 @@ services:
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
+  
+  mongo:
+    image: mongo:7.0
+    container_name: mongo_container_1
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+  
   adminer:  
     image: adminer:latest
     container_name: adminer_container
@@ -44,3 +57,4 @@ services:
 volumes:
   pg_data:
   redis_data:
+  mongo_data:
