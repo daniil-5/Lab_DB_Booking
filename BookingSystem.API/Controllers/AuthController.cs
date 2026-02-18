@@ -44,6 +44,9 @@ public class AuthController : ControllerBase
         {
             var response = await _authService.Login(loginDto);
             
+            HttpContext.Session.SetString("jwt_token", response.Token);
+            HttpContext.Session.SetInt32("user_id", response.Id);
+            
             // SetTokenCookie(response.Token);
             // response.Token = null;
             
@@ -67,14 +70,16 @@ public class AuthController : ControllerBase
         {
             await _authService.Logout(int.Parse(userId));
         }
+        
+        HttpContext.Session.Clear();
 
-        Response.Cookies.Delete("X-Access-Token", new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Path = "/"
-        });
+        // Response.Cookies.Delete("X-Access-Token", new CookieOptions
+        // {
+        //     HttpOnly = true,
+        //     Secure = true,
+        //     SameSite = SameSiteMode.Strict,
+        //     Path = "/"
+        // });
         
         return Ok(new { message = "Logged out successfully" });
     }

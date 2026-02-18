@@ -131,6 +131,15 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.Configuration = builder.Configuration.GetConnectionString("Redis");
 });
 
+builder.Services.AddSession(options =>
+    {
+        options.IdleTimeout = TimeSpan.FromMinutes(10);
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+    }
+);
+
 // Register cache service abstraction
 builder.Services.AddScoped<ICacheService, RedisCacheService>();
 
@@ -243,7 +252,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnMessageReceived = context =>
             {
-                context.Token = context.Request.Cookies["X-Access-Token"];
+                // context.Token = context.Request.Cookies["X-Access-Token"];
+                context.Token = context.HttpContext.Session.GetString("jwt_token");
                 if (string.IsNullOrEmpty(context.Token))
                 {
                     var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
@@ -285,6 +295,7 @@ app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
 app.UseCors("AllowSpecificOrigin");
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
