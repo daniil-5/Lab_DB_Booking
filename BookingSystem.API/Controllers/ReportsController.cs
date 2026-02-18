@@ -53,9 +53,9 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("anomalies")]
-    public async Task<IActionResult> GetAnomalyReport(string format = "json")
+    public async Task<IActionResult> GetAnomalyReport(string format = "json", [FromQuery] int threshold = 20, [FromQuery] int windowInMinutes = 1)
     {
-        var report = await _reportingService.GetAnomalyReportAsync();
+        var report = await _reportingService.GetAnomalyReportAsync(threshold, windowInMinutes);
         return await FormatAndReturn(report, format, "anomaly_report");
     }
     

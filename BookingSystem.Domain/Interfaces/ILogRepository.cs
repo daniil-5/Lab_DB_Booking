@@ -11,4 +11,5 @@ public interface ILogRepository
     Task<IEnumerable<TopUser>> GetTopUsersReportAsync();
     Task<IEnumerable<OperationDistribution>> GetOperationDistributionReportAsync();
     Task<IEnumerable<TimeSeries>> GetTimeSeriesReportAsync();
+    Task<IEnumerable<Anomaly>> GetAnomalyReportAsync(int threshold, int windowInMinutes);
 }

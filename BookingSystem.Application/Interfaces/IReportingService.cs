@@ -10,5 +10,5 @@ public interface IReportingService
     Task<IEnumerable<TopUserReport>> GetTopUsersReportAsync();
     Task<IEnumerable<OperationDistributionReport>> GetOperationDistributionReportAsync();
     Task<IEnumerable<TimeSeriesReport>> GetTimeSeriesReportAsync();
-    Task<IEnumerable<AnomalyReport>> GetAnomalyReportAsync();
+    Task<IEnumerable<AnomalyReport>> GetAnomalyReportAsync(int threshold, int windowInMinutes);
 }

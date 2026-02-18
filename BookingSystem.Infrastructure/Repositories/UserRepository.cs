@@ -104,4 +104,11 @@ public class UserRepository : IUserRepository
             ORDER BY u.created_at ASC;";
         return await conn.QueryAsync<User>(sql);
     }
+    
+    public async Task<IEnumerable<User>> GetUsersByIdsAsync(IEnumerable<int> userIds)
+    {
+        using var conn = _context.CreateConnection();
+        return await conn.QueryAsync<User>(
+            "select * from users where id = ANY(@userIds) and is_deleted=false", new { userIds });
+    }
 }
