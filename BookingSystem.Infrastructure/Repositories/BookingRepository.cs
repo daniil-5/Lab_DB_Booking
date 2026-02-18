@@ -43,8 +43,8 @@ public class BookingRepository : IBookingRepository
     {
         using var conn = _context.CreateConnection();
         var id = await conn.ExecuteScalarAsync<int>(
-@"insert into bookings (user_id, room_type_id, check_in_date, check_out_date, status, total_price, created_at, is_deleted)
- values (@UserId, @RoomTypeId, @CheckInDate, @CheckOutDate, @Status, @TotalPrice, @CreatedAt, false)
+@"insert into bookings (user_id, room_type_id, hotel_id, check_in_date, check_out_date, guest_count, status, total_price, created_at, is_deleted)
+ values (@UserId, @RoomTypeId, @HotelId, @CheckInDate, @CheckOutDate, @GuestCount, @Status, @TotalPrice, @CreatedAt, false)
  returning id", entity);
         entity.Id = id;
     }
@@ -54,7 +54,7 @@ public class BookingRepository : IBookingRepository
         using var conn = _context.CreateConnection();
         await conn.ExecuteAsync(
 @"update bookings
-   set user_id=@UserId, room_type_id=@RoomTypeId, check_in_date=@CheckInDate, check_out_date=@CheckOutDate,
+   set check_in_date=@CheckInDate, check_out_date=@CheckOutDate,
        status=@Status, total_price=@TotalPrice, updated_at=@UpdatedAt
  where id=@Id and is_deleted=false", entity);
     }
