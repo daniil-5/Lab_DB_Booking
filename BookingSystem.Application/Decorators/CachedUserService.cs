@@ -11,6 +11,7 @@ public class CachedUserService : IUserService
     private readonly IUserService _userService;
     private readonly ICacheService _cacheService;
     private readonly ILogger<CachedUserService> _logger;
+    private readonly ICacheInvalidationPublisher _publisher;
 
     // Cache key constants for better maintainability
     private const string USER_BY_ID_KEY = "user:id:{0}";
@@ -29,11 +30,13 @@ public class CachedUserService : IUserService
     public CachedUserService(
         IUserService userService, 
         ICacheService cacheService,
-        ILogger<CachedUserService> logger)
+        ILogger<CachedUserService> logger,
+        ICacheInvalidationPublisher publisher)
     {
         _userService = userService;
         _cacheService = cacheService;
         _logger = logger;
+        _publisher = publisher;
     }
 
     public async Task<UserDto> CreateUserAsync(CreateUserDto userDto)
@@ -48,6 +51,8 @@ public class CachedUserService : IUserService
         
         // Invalidate related caches since we have a new user
         await InvalidateListCaches();
+
+        await _publisher.PublishAsync("user", newUser.Id.ToString());
         
         _logger.LogInformation("User created and cached with ID: {UserId}", newUser.Id);
         return newUser;
@@ -81,6 +86,8 @@ public class CachedUserService : IUserService
         
         // Invalidate list caches since user data changed
         await InvalidateListCaches();
+
+        await _publisher.PublishAsync("user", userDto.Id.ToString());
         
         _logger.LogInformation("User updated and cache refreshed for ID: {UserId}", updatedUser.Id);
         return updatedUser;
@@ -106,6 +113,8 @@ public class CachedUserService : IUserService
         
         // Invalidate list caches since user was deleted
         await InvalidateListCaches();
+
+        await _publisher.PublishAsync("user", id.ToString());
         
         _logger.LogInformation("User deleted and cache invalidated for ID: {UserId}", id);
     }
@@ -235,6 +244,7 @@ public class CachedUserService : IUserService
             if (updatedUser != null)
             {
                 await CacheUser(updatedUser);
+                await _publisher.PublishAsync("user", updatedUser.Id.ToString());
             }
             
             _logger.LogInformation("Password changed and cache updated for user ID: {UserId}", 

@@ -11,6 +11,7 @@ public class CachedBookingService : IBookingService
     private readonly IBookingService _bookingService;
     private readonly ICacheService _cacheService;
     private readonly ILogger<CachedBookingService> _logger;
+    private readonly ICacheInvalidationPublisher _publisher;
 
     // Cache key constants
     private const string BOOKING_BY_ID_KEY = "booking:id:{0}";
@@ -34,11 +35,13 @@ public class CachedBookingService : IBookingService
     public CachedBookingService(
         IBookingService bookingService,
         ICacheService cacheService,
-        ILogger<CachedBookingService> logger)
+        ILogger<CachedBookingService> logger,
+        ICacheInvalidationPublisher publisher)
     {
         _bookingService = bookingService;
         _cacheService = cacheService;
         _logger = logger;
+        _publisher = publisher;
     }
 
     public async Task<BookingResponseDto> CreateBookingAsync(CreateBookingDto bookingDto)
@@ -53,6 +56,8 @@ public class CachedBookingService : IBookingService
         
         // Invalidate related caches
         await InvalidateBookingRelatedCaches(newBooking);
+
+        await _publisher.PublishAsync("booking", newBooking.Id.ToString());
         
         _logger.LogInformation("Booking created and cached with ID: {BookingId}", newBooking.Id);
         return newBooking;
@@ -81,6 +86,8 @@ public class CachedBookingService : IBookingService
             await InvalidateAvailabilityCache(updatedBooking.RoomTypeId, updatedBooking.HotelId);
         }
         
+        await _publisher.PublishAsync("booking", dto.Id.ToString());
+        
         _logger.LogInformation("Booking updated and cache refreshed for ID: {BookingId}", updatedBooking.Id);
         return updatedBooking;
     }
@@ -103,6 +110,8 @@ public class CachedBookingService : IBookingService
             await InvalidateBookingRelatedCaches(bookingToDelete);
             await InvalidateAvailabilityCache(bookingToDelete.RoomTypeId, bookingToDelete.HotelId);
         }
+
+        await _publisher.PublishAsync("booking", id.ToString());
         
         _logger.LogInformation("Booking deleted and cache invalidated for ID: {BookingId}", id);
     }
@@ -320,6 +329,8 @@ public class CachedBookingService : IBookingService
         // Invalidate related caches
         await InvalidateBookingRelatedCaches(cancelledBooking);
         await InvalidateAvailabilityCache(cancelledBooking.RoomTypeId, cancelledBooking.HotelId);
+
+        await _publisher.PublishAsync("booking", id.ToString());
         
         _logger.LogInformation("Booking cancelled and cache updated for ID: {BookingId}", id);
         return cancelledBooking;
@@ -336,6 +347,8 @@ public class CachedBookingService : IBookingService
         
         // Invalidate related caches
         await InvalidateBookingRelatedCaches(updatedBooking);
+        
+        await _publisher.PublishAsync("booking", id.ToString());
         
         _logger.LogInformation("Booking status updated and cache refreshed for ID: {BookingId}", id);
         return updatedBooking;

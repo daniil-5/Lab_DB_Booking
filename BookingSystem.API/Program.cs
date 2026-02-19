@@ -20,6 +20,7 @@ using Microsoft.OpenApi.Models;
 using Npgsql;
 using Serilog;
 using BookingSystem.Domain.Enums;
+using BookingSystem.Infrastructure.Messaging;
 using Scalar.AspNetCore;
 using Serilog.Events;
 using StackExchange.Redis;
@@ -145,6 +146,14 @@ builder.Services.AddScoped<ICacheService, RedisCacheService>();
 
 #endregion
 
+#region Pub/Sub
+
+builder.Services.AddSingleton<ICacheInvalidationPublisher, CacheInvalidationPublisher>();
+
+builder.Services.AddHostedService<CacheInvalidationSubscriber>();
+
+#endregion
+
 #region Repositories
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IHotelRepository, HotelRepository>();
@@ -169,14 +178,16 @@ builder.Services.AddScoped<IBookingService>(provider =>
     new CachedBookingService(
         provider.GetRequiredService<BookingService>(),
         provider.GetRequiredService<ICacheService>(),
-        provider.GetRequiredService<ILogger<CachedBookingService>>())
+        provider.GetRequiredService<ILogger<CachedBookingService>>(),
+        provider.GetRequiredService<ICacheInvalidationPublisher>())
 );
 
 builder.Services.AddScoped<IHotelService>(provider =>
     new CachedHotelService(
         provider.GetRequiredService<HotelService>(),
         provider.GetRequiredService<ICacheService>(),
-        provider.GetRequiredService<ILogger<CachedHotelService>>())
+        provider.GetRequiredService<ILogger<CachedHotelService>>(),
+        provider.GetRequiredService<ICacheInvalidationPublisher>())
 );
 
 
@@ -184,7 +195,8 @@ builder.Services.AddScoped<IUserService>(provider =>
     new CachedUserService(
         provider.GetRequiredService<UserService>(),
         provider.GetRequiredService<ICacheService>(),
-        provider.GetRequiredService<ILogger<CachedUserService>>())
+        provider.GetRequiredService<ILogger<CachedUserService>>(),
+        provider.GetRequiredService<ICacheInvalidationPublisher>())
 );
 
 builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();

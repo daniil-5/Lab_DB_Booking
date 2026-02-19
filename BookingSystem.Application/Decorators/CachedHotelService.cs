@@ -11,6 +11,7 @@ namespace BookingSystem.Application.Decorators
         private readonly IHotelService _hotelService;
         private readonly ICacheService _cacheService;
         private readonly ILogger<CachedHotelService> _logger;
+        private readonly ICacheInvalidationPublisher _publisher;
 
         // Cache key constants
         private const string HOTEL_BY_ID_KEY = "hotel:id:{0}";
@@ -27,11 +28,13 @@ namespace BookingSystem.Application.Decorators
         public CachedHotelService(
             IHotelService hotelService,
             ICacheService cacheService,
-            ILogger<CachedHotelService> logger)
+            ILogger<CachedHotelService> logger,
+            ICacheInvalidationPublisher publisher)
         {
             _hotelService = hotelService;
             _cacheService = cacheService;
             _logger = logger;
+            _publisher = publisher;
         }
 
         public async Task<HotelDto> CreateHotelAsync(CreateHotelDto hotelDto)
@@ -45,6 +48,8 @@ namespace BookingSystem.Application.Decorators
             
             // Invalidate list caches
             await InvalidateListCaches();
+            
+            await _publisher.PublishAsync("hotel", newHotel.Id.ToString());
             
             _logger.LogInformation("Hotel created and cached with ID: {HotelId}", newHotel.Id);
             return newHotel;
@@ -61,8 +66,11 @@ namespace BookingSystem.Application.Decorators
             
             // Invalidate list caches as hotel data changed
             await InvalidateListCaches();
-            
+
             _logger.LogInformation("Hotel updated and cache refreshed for ID: {HotelId}", updatedHotel.Id);
+            
+            await _publisher.PublishAsync("hotel", hotelDto.Id.ToString());
+            
             return updatedHotel;
         }
 
@@ -77,6 +85,8 @@ namespace BookingSystem.Application.Decorators
             
             // Invalidate list caches
             await InvalidateListCaches();
+
+            await _publisher.PublishAsync("hotel", id.ToString());
             
             _logger.LogInformation("Hotel deleted and cache invalidated for ID: {HotelId}", id);
         }
