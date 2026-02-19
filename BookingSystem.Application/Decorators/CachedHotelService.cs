@@ -190,9 +190,28 @@ namespace BookingSystem.Application.Decorators
             return _hotelService.GetHotelsRankedByLocationAsync();
         }
 
-        public Task<HotelPerformanceReport> GetHotelPerformanceReportAsync(int hotelId)
+        public async Task<HotelPerformanceReport?> GetHotelPerformanceReportAsync(int hotelId)
         {
-            return _hotelService.GetHotelPerformanceReportAsync(hotelId);
+            var cacheKey = $"hotel:performance:{hotelId}";
+            
+            var cachedReport = await _cacheService.GetAsync<HotelPerformanceReport>(cacheKey);
+            if (cachedReport != null)
+            {
+                _logger.LogDebug("Hotel performance report found in cache for ID: {HotelId}", hotelId);
+                return cachedReport;
+            }
+            
+            _logger.LogDebug("Hotel performance report not found in cache, fetching from service for ID: {HotelId}", hotelId);
+            
+            var report = await _hotelService.GetHotelPerformanceReportAsync(hotelId);
+            
+            if (report != null)
+            {
+                await _cacheService.SetAsync(cacheKey, report, HotelCacheExpiration); // Re-use existing expiration
+                _logger.LogDebug("Hotel performance report cached for ID: {HotelId}", hotelId);
+            }
+            
+            return report;
         }
 
         public Task<IEnumerable<MonthlyBookingTrend>> GetMonthlyBookingTrendsAsync(int? hotelId = null, int months = 12)

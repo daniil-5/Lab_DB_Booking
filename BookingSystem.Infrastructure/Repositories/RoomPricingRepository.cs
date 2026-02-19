@@ -39,8 +39,8 @@ public class RoomPricingRepository : IRepository<RoomPricing>
     {
         using var conn = _context.CreateConnection();
         var id = await conn.ExecuteScalarAsync<int>(
-@"insert into room_pricings (room_type_id, effective_date, price, created_at, is_deleted)
- values (@RoomTypeId, @EffectiveDate, @Price, @CreatedAt, false)
+@"insert into room_pricings (room_type_id, date, price, created_at, is_deleted)
+ values (@RoomTypeId, @Date, @Price, @CreatedAt, false)
  returning id", entity);
         entity.Id = id;
     }
@@ -50,7 +50,7 @@ public class RoomPricingRepository : IRepository<RoomPricing>
         using var conn = _context.CreateConnection();
         await conn.ExecuteAsync(
 @"update room_pricings
-   set room_type_id=@RoomTypeId, effective_date=@EffectiveDate, price=@Price, updated_at=@UpdatedAt
+   set room_type_id=@RoomTypeId, date=@Date, price=@Price, updated_at=@UpdatedAt
  where id=@Id and is_deleted=false", entity);
     }
 

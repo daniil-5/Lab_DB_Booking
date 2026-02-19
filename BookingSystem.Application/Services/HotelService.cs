@@ -257,17 +257,13 @@ public class HotelService : IHotelService
         });
     }
     
-    public async Task<HotelPerformanceReport> GetHotelPerformanceReportAsync(int hotelId)
+    public async Task<HotelPerformanceReport?> GetHotelPerformanceReportAsync(int hotelId)
     {
         var domainReport = await _hotelRepository.GetHotelPerformanceReportAsync(hotelId);
         
         if (domainReport == null)
         {
-            await _loggingService.LogErrorAsync(new KeyNotFoundException($"Hotel with ID {hotelId} not found"), GetCurrentUserId(),
-                                                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
-                                                    _httpContextAccessor.HttpContext?.Request.Path,
-                                                    _httpContextAccessor.HttpContext?.Request.Method);
-            throw new KeyNotFoundException($"Hotel with ID {hotelId} not found");
+            return null;
         }
 
         return new HotelPerformanceReport
