@@ -18,14 +18,23 @@ public class ReportingService : IReportingService
         _userRepository = userRepository;
     }
 
-    public async Task<IEnumerable<UserActivityReport>> GetUserActivityReportAsync(string period)
+    public async Task<IEnumerable<UserActivityReport>> GetUserActivityReportAsync(DateTime? startDate, DateTime? endDate)
     {
-        var result = await _logRepository.GetUserActivityReportAsync(period);
-        return result.Select(r => new UserActivityReport
+        var result = await _logRepository.GetUserActivityReportAsync(startDate, endDate);
+        var userIds = result.Select(r => r.UserId).ToList();
+        var users = await _userRepository.GetUsersByIdsAsync(userIds);
+
+        return result.Select(r =>
         {
-            Period = r.Id.ToString(),
-            TotalActions = r.TotalActions,
-            ActionTypeCounts = r.ActionTypeCounts.ToDictionary(atc => atc.ActionType.ToString(), atc => atc.Count)
+            var user = users.FirstOrDefault(u => u.Id == r.UserId);
+            return new UserActivityReport
+            {
+                UserId = r.UserId,
+                Username = user?.Username ?? "Unknown",
+                TotalActions = r.TotalActions,
+                LastActionTimestamp = r.LastActionTimestamp,
+                ActionTypeCounts = r.ActionTypeCounts.ToDictionary(atc => atc.ActionType.ToString(), atc => atc.Count)
+            };
         });
     }
 

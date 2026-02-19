@@ -7,7 +7,7 @@ public interface ILogRepository
 {
     Task AddLogAsync(LogEntity log);
     Task<IEnumerable<LogEntity>> GetLogsAsync(DateTime? startDate, DateTime? endDate, int? userId, string? eventType);
-    Task<IEnumerable<UserActivity>> GetUserActivityReportAsync(string period);
+    Task<IEnumerable<TopUser>> GetUserActivityReportAsync(DateTime? startDate, DateTime? endDate);
     Task<IEnumerable<TopUser>> GetTopUsersReportAsync();
     Task<IEnumerable<OperationDistribution>> GetOperationDistributionReportAsync();
     Task<IEnumerable<TimeSeries>> GetTimeSeriesReportAsync();

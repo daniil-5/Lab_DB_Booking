@@ -19,15 +19,9 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("user-activity")]
-    public async Task<IActionResult> GetUserActivityReport([FromQuery] string period = "day", [FromQuery] string format = "json")
+    public async Task<IActionResult> GetUserActivityReport([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, [FromQuery] string format = "json")
     {
-        var supportedPeriods = new[] { "day", "week", "month" };
-        if (!supportedPeriods.Contains(period.ToLower()))
-        {
-            return BadRequest("Invalid period. Supported periods are 'day', 'week', 'month'.");
-        }
-
-        var report = await _reportingService.GetUserActivityReportAsync(period);
+        var report = await _reportingService.GetUserActivityReportAsync(startDate, endDate);
         return await FormatAndReturn(report, format, "user_activity_report");
     }
 

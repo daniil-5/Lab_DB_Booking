@@ -69,49 +69,38 @@ public class MongoLogRepository : ILogRepository
         return await _logCollection.Find(filter).ToListAsync();
     }
 
-    public async Task<IEnumerable<Domain.DTOs.Reports.UserActivity>> GetUserActivityReportAsync(string period)
+    public async Task<IEnumerable<Domain.DTOs.Reports.TopUser>> GetUserActivityReportAsync(DateTime? startDate, DateTime? endDate)
     {
-        var groupBy = new BsonDocument();
-        switch (period.ToLower())
+        var matchFilter = new BsonDocument("action_type", new BsonDocument("$ne", BsonNull.Value));
+
+        if (startDate.HasValue || endDate.HasValue)
         {
-            case "day":
-                groupBy = new BsonDocument
-                {
-                    { "year", new BsonDocument("$year", "$timestamp") },
-                    { "month", new BsonDocument("$month", "$timestamp") },
-                    { "day", new BsonDocument("$dayOfMonth", "$timestamp") }
-                };
-                break;
-            case "week":
-                groupBy = new BsonDocument
-                {
-                    { "year", new BsonDocument("$year", "$timestamp") },
-                    { "week", new BsonDocument("$week", "$timestamp") }
-                };
-                break;
-            case "month":
-                groupBy = new BsonDocument
-                {
-                    { "year", new BsonDocument("$year", "$timestamp") },
-                    { "month", new BsonDocument("$month", "$timestamp") }
-                };
-                break;
-            default:
-                throw new ArgumentException("Invalid period. Supported periods are 'day', 'week', 'month'.");
+            var dateFilter = new BsonDocument();
+            if (startDate.HasValue)
+            {
+                dateFilter.Add("$gte", startDate.Value);
+            }
+            if (endDate.HasValue)
+            {
+                dateFilter.Add("$lte", endDate.Value);
+            }
+            matchFilter.Add("timestamp", dateFilter);
         }
 
         var pipeline = new BsonDocument[]
         {
-            new BsonDocument("$match", new BsonDocument("action_type", new BsonDocument("$ne", BsonNull.Value))),
+            new BsonDocument("$match", matchFilter),
             new BsonDocument("$group", new BsonDocument
             {
-                { "_id", new BsonDocument { { "period", groupBy }, { "action_type", "$action_type" } } },
-                { "count", new BsonDocument("$sum", 1) }
+                { "_id", new BsonDocument { { "user_id", "$user_id" }, { "action_type", "$action_type" } } },
+                { "count", new BsonDocument("$sum", 1) },
+                { "LastActionTimestamp", new BsonDocument("$max", "$timestamp") }
             }),
             new BsonDocument("$group", new BsonDocument
             {
-                { "_id", "$_id.period" },
+                { "_id", "$_id.user_id" },
                 { "TotalActions", new BsonDocument("$sum", "$count") },
+                { "LastActionTimestamp", new BsonDocument("$max", "$LastActionTimestamp") },
                 { "ActionTypeCounts", new BsonDocument("$push", new BsonDocument
                     {
                         { "ActionType", "$_id.action_type" },
@@ -119,10 +108,18 @@ public class MongoLogRepository : ILogRepository
                     })
                 }
             }),
-            new BsonDocument("$sort", new BsonDocument("_id", 1))
+            new BsonDocument("$sort", new BsonDocument("TotalActions", -1)),
+            new BsonDocument("$project", new BsonDocument
+            {
+                { "_id", 0 },
+                { "UserId", "$_id" },
+                { "TotalActions", "$TotalActions" },
+                { "LastActionTimestamp", "$LastActionTimestamp" },
+                { "ActionTypeCounts", "$ActionTypeCounts" }
+            })
         };
 
-        var result = await _logCollection.Aggregate<BookingSystem.Domain.DTOs.Reports.UserActivity>(pipeline).ToListAsync();
+        var result = await _logCollection.Aggregate<BookingSystem.Domain.DTOs.Reports.TopUser>(pipeline).ToListAsync();
         return result;
     }
 
